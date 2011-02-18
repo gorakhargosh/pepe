@@ -1,4 +1,8 @@
-include *.in Makefile*  *.txt MANIFEST
+include MANIFEST
+include README
+include LICENSE
+include AUTHORS 
+include *.txt
 recursive-include test/inputs *
 recursive-include test/outputs *
 exclude *~
