@@ -888,16 +888,20 @@ def parse_definitions(definitions):
 
             * <variable>=<value>
             * <variable>
-
-        Examples of command line arguments being parsed to tables:
-        ----------------------------------------------------------
-        ['DEBUG=1']                      ->    {'DEBUG': 1}
-        ['FOOBAR=0x40', 'DEBUG=false']   ->    {'DEBUG': False, 'FOOBAR': 64}
-        ['FOOBAR=whatever']              ->    {'FOOBAR': 'whatever'}
-        ['FOOBAR']                       ->    {'FOOBAR': None}
-        ['FOOBAR=ah=3']                  ->    {'FOOBAR': 'ah=3'}
     :return:
         ``dict`` as symbol table.
+
+    Usage:
+    >>> parse_definitions(['DEBUG=1'])
+    {'DEBUG': 1}
+    >>> parse_definitions(['FOOBAR=0x40', 'DEBUG=false'])
+    {'DEBUG': False, 'FOOBAR': 64}
+    >>> parse_definitions(['FOOBAR=whatever'])
+    {'FOOBAR': 'whatever'}
+    >>> parse_definitions(['FOOBAR'])
+    {'FOOBAR': None}
+    >>> parse_definitions(['FOOBAR=ah=3'])
+    {'FOOBAR': 'ah=3'}
     """
     defines = {}
     for definition in definitions:
