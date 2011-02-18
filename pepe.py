@@ -752,6 +752,9 @@ def parse_command_line():
     """\
     Parses the command line and returns a ``Namespace`` object
     containing options and their values.
+
+    :return:
+        A ``Namespace`` object containing options and their values.
     """
 
     import argparse
