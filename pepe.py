@@ -698,7 +698,7 @@ class ContentTypesRegistry:
                 contentType = self.suffixMap[suffix]
                 log.debug("Content type of '%s' is '%s' (determined from "\
                           "suffix '%s').", path, contentType, suffix)
-            # Try to determine from the registered set of regex patterns.
+                # Try to determine from the registered set of regex patterns.
         if not contentType:
             for regex, ctype in self.regexMap.items():
                 if regex.search(basename):
@@ -707,7 +707,7 @@ class ContentTypesRegistry:
                         "Content type of '%s' is '%s' (matches regex '%s')",
                         path, contentType, regex.pattern)
                     break
-            # Try to determine from the file contents.
+                    # Try to determine from the file contents.
         content = open(path, 'rb').read()
         if content.startswith("<?xml"):  # cheap XML sniffing
             contentType = "XML"
@@ -748,9 +748,13 @@ except NameError:
             yield item
 
 
-#---- mainline
 
 def parse_command_line():
+    """\
+    Parses the command line and returns a Namespace object
+    containing options and their values.
+    """
+
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -796,6 +800,7 @@ false value.""")
                         '--include',
                         dest='include_dir',
                         action='append',
+                        default=['.'],
                         help='Add a directory to the include path for #include directives.')
     parser.add_argument('-k',
                         '--keep-lines',
@@ -817,7 +822,8 @@ Substitute #defines into emitted lines.
     parser.add_argument('-c',
                         '--content-types-path',
                         '--content-types-config',
-                        dest='content_types_config',
+                        dest='content_types_config_files',
+                        action='append',
                         help="""\
 Specify a path to a content.types file to assist
 with file type determination. See the
@@ -825,7 +831,8 @@ with file type determination. See the
 details on its format.""")
     return parser.parse_args()
 
-def parse_int(string):
+
+def parse_int_token(string):
     """\
     Parses a string to convert it to an integer based on the format used:
 
@@ -838,6 +845,8 @@ def parse_int(string):
         The string to convert to an integer.
     :type string:
         ``str``
+    :return:
+        ``int`` or raises ``ValueError`` exception.
     """
     if string.startswith("0x") or string.startswith("0X"):
         return int(string, 16)
@@ -846,7 +855,8 @@ def parse_int(string):
     else:
         return int(string)
 
-def parse_bool(string):
+
+def parse_bool_token(string):
     """\
     Parses a string to convert it to its equivalent boolean value or
     leaves the string intact if it cannot.
@@ -855,6 +865,8 @@ def parse_bool(string):
         String to convert to ``True`` or ``False``.
     :type string:
         ``str``
+    :return:
+        ``True`` or ``False`` or the string itself if not converted.
     """
     string = string.lower()
     if string == "true":
@@ -864,86 +876,69 @@ def parse_bool(string):
     else:
         return string
 
-def main():
-    args = parse_command_line()
 
+def parse_definitions(definitions):
+    """\
+    Parses a list of macro definitions and returns a "symbol table"
+    as a dictionary.
+
+    :params definitions:
+        A list of command line macro definitions.
+        Each item in the list should be in one of these two formats:
+
+            * <variable>=<value>
+            * <variable>
+
+        Examples of command line arguments being parsed to tables:
+        ----------------------------------------------------------
+        -D DEBUG=1                      ->    {'DEBUG': 1}
+        -D FOOBAR=0x40 -D DEBUG=false   ->    {'DEBUG': False, 'FOOBAR': 64}
+        -D FOOBAR=whatever              ->    {'FOOBAR': 'whatever'}
+        -D FOOBAR                       ->    {'FOOBAR': None}
+
+    :return:
+        ``dict`` as symbol table.
+    """
     defines = {}
-
-    for definition in args.definitions:
+    for definition in definitions:
         try:
             define, value = definition.split('=', 1)
             try:
                 # Caveat: Float values like 2e-23 will not be parsed.
-                value = float(value) if '.' in value else parse_int(value)
+                value = float(value) if '.' in value else parse_int_token(value)
             except ValueError:
-                value = parse_bool(value)
+                value = parse_bool_token(value)
         except ValueError:
             define, value = definition, None
         defines[define] = value
+    return defines
 
-    print(defines)
 
-def old_main(argv):
-    try:
-        optlist, args = getopt.getopt(argv[1:], 'hVvo:D:fkI:sc:',
-                                      ['help', 'version', 'verbose', 'force',
-                                       'keep-lines',
-                                       'substitute', 'content-types-path='])
-    except getopt.GetoptError, msg:
-        sys.stderr.write("pepe: error: %s. Your invocation was: %s\n"\
-                         % (msg, argv))
-        sys.stderr.write("See 'pepe --help'.\n")
-        return 1
-    outfile = sys.stdout
-    defines = {}
-    force = 0
-    keepLines = 0
-    substitute = 0
+def main():
+    """\
+    Entry-point function.
+    """
+    args = parse_command_line()
+
+    defines = parse_definitions(args.definitions)
     include_path = []
     content_types_path = []
-    for opt, optarg in optlist:
-        if opt in ('-h', '--help'):
-            sys.stdout.write(__doc__)
-            return 0
-        elif opt in ('-V', '--version'):
-            sys.stdout.write("pepe %s\n" % __version__)
-            return 0
-        elif opt in ('-v', '--verbose'):
-            log.setLevel(log.DEBUG)
-        elif opt == '-o':
-            outfile = optarg
-        if opt in ('-f', '--force'):
-            force = 1
-        elif opt == '-D':
-            if optarg.find('=') != -1:
-                var, val = optarg.split('=', 1)
-                try:
-                    val = int(val)
-                except ValueError:
-                    pass
-            else:
-                var, val = optarg, None
-            defines[var] = val
-        elif opt in ('-k', '--keep-lines'):
-            keepLines = 1
-        elif opt == '-I':
-            include_path.append(optarg)
-        elif opt in ('-s', '--substitute'):
-            substitute = 1
-        elif opt in ('-c', '--content-types-path'):
-            content_types_path.append(optarg)
 
-    if len(args) != 1:
-        sys.stderr.write("pepe: error: incorrect number of "\
-                         "arguments: argv=%r\n" % argv)
-        return 1
-    else:
-        infile = args[0]
+    if args.should_be_verbose:
+        log.setLevel(log.DEBUG)
+    outfile = args.output_file
+    infile = args.input_file
 
     try:
         contentTypesRegistry = ContentTypesRegistry(content_types_path)
-        preprocess(infile, outfile, defines, force, keepLines, include_path,
-                   substitute, contentTypesRegistry=contentTypesRegistry)
+        preprocess(infile,
+                   outfile,
+                   defines,
+                   args.should_force_overwrite,
+                   args.should_keep_lines,
+                   include_path,
+                   args.should_substitute,
+                   contentTypesRegistry=contentTypesRegistry)
     except PreprocessError, ex:
         if log.isDebugEnabled():
             import traceback
@@ -954,8 +949,6 @@ def old_main(argv):
         return 1
 
 if __name__ == "__main__":
-    #__file__ = sys.argv[0]
-    #sys.exit(old_main(sys.argv))
     main()
 
 
