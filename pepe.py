@@ -82,7 +82,6 @@ Preprocessor Syntax
     defined(varName)    Return true if given variable is defined.
 
 """
-import argparse
 
 __version_info__ = (1, 1, 0)
 __version__ = '.'.join(map(str, __version_info__))
@@ -752,6 +751,8 @@ except NameError:
 #---- mainline
 
 def main():
+    import argparse
+
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument('-v',
                         '--version',
