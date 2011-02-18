@@ -93,31 +93,53 @@ import types
 import re
 import pprint
 
+# Python version compatibility functions.
+try:
+    reversed
+except NameError:
+    # 'reversed' added in Python 2.4 (http://www.python.org/doc/2.4/whatsnew/node7.html)
+    def reversed(seq):
+        rseq = list(seq)
+        rseq.reverse()
+        for item in rseq:
+            yield item
+try:
+    sorted
+except NameError:
+    # 'sorted' added in Python 2.4. Note that I'm only implementing enough
+    # of sorted as is used in this module.
+    def sorted(seq, key=None):
+        identity = lambda x: x
+        key_func = (key or identity)
+        sseq = list(seq)
+        sseq.sort(lambda self, other: cmp(key_func(self), key_func(other)))
+        for item in sseq:
+            yield item
 
 
-#---- exceptions
-
-class PreprocessError(Exception):
-    def __init__(self, errmsg, file=None, lineno=None, line=None):
-        self.errmsg = str(errmsg)
-        self.file = file
-        self.lineno = lineno
+class PreprocessorError(Exception):
+    def __init__(self, error_message, filename=None, line_number=None, line=None):
+        self.error_message = error_message
+        self.filename = filename
+        self.line_number = line_number
         self.line = line
-        Exception.__init__(self, errmsg, file, lineno, line)
+        Exception.__init__(self, error_message, filename, line_number, line)
 
     def __str__(self):
-        s = ""
-        if self.file is not None:
-            s += self.file + ":"
-        if self.lineno is not None:
-            s += str(self.lineno) + ":"
-        if self.file is not None or self.lineno is not None:
-            s += " "
-        s += self.errmsg
-        #if self.line is not None:
-        #    s += ": " + self.line
-        return s
+        """\
 
+        Usage:
+
+            >>> assert str(PreprocessorError("whatever", filename="somefile.py", line_number=20, line="blahblah")) == "somefile.py:20: whatever"
+            >>> assert str(PreprocessorError("whatever", line_number=20, line="blahblah")) == "20: whatever"
+            >>> assert str(PreprocessorError("whatever", filename="somefile.py", line="blahblah")) == "somefile.py: whatever"
+            >>> assert str(PreprocessorError("whatever", line="blahblah")) == "whatever"
+        """
+        s = ":".join([str(f) for f in [self.filename, self.line_number] if f])
+        if s:
+            s += ": "
+        s += self.error_message
+        return s
 
 #---- global data
 
@@ -253,7 +275,7 @@ def _evaluate(expr, defines):
                        "\"defined(%s)\")" % (varName, varName)
         elif msg.startswith("invalid syntax"):
             msg = "invalid syntax: '%s'" % expr
-        raise PreprocessError(msg, defines['__FILE__'], defines['__LINE__'])
+        raise PreprocessorError(msg, defines['__FILE__'], defines['__LINE__'])
     log.debug("evaluate %r -> %s (defines=%r)", expr, rv, defines)
     return rv
 
@@ -298,14 +320,14 @@ def preprocess(infile, outfile=sys.stdout, defines={},
              keepLines, includePath, contentType, __preprocessedFiles)
     absInfile = os.path.normpath(os.path.abspath(infile))
     if absInfile in __preprocessedFiles:
-        raise PreprocessError("detected recursive #include of '%s'"\
+        raise PreprocessorError("detected recursive #include of '%s'"\
                               % infile)
     __preprocessedFiles.append(os.path.abspath(infile))
 
     # Determine the content type and comment info for the input file.
     if contentType is None:
         registry = contentTypesRegistry or getDefaultContentTypesRegistry()
-        contentType = registry.getContentType(infile)
+        contentType = registry.get_content_type(infile)
         if contentType is None:
             contentType = "Text"
             log.warn("defaulting content type for '%s' to '%s'",
@@ -313,7 +335,7 @@ def preprocess(infile, outfile=sys.stdout, defines={},
     try:
         cgs = _commentGroups[contentType]
     except KeyError:
-        raise PreprocessError("don't know comment delimiters for content "\
+        raise PreprocessorError("don't know comment delimiters for content "\
                               "type '%s' (file '%s')"\
                               % (contentType, infile))
 
@@ -425,7 +447,7 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                         if os.path.exists(fname):
                             break
                     else:
-                        raise PreprocessError("could not find #include'd file "\
+                        raise PreprocessorError("could not find #include'd file "\
                                               "\"%s\" on include path: %r"\
                                               % (f, includePath))
                     defines = preprocess(fname, fout, defines, force,
@@ -449,14 +471,14 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                     else:
                         states.append((SKIP, 0, 0))
                 except KeyError:
-                    raise PreprocessError("use of undefined variable in "\
+                    raise PreprocessorError("use of undefined variable in "\
                                           "#%s stmt" % op, defines['__FILE__'],
                                           defines['__LINE__'], line)
             elif op == "elif":
                 expr = match.group("expr")
                 try:
                     if states[-1][2]: # already had #else in this if-block
-                        raise PreprocessError("illegal #elif after #else in "\
+                        raise PreprocessorError("illegal #elif after #else in "\
                                               "same #if block",
                                               defines['__FILE__'],
                                               defines['__LINE__'], line)
@@ -470,13 +492,13 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                     else:
                         states[-1] = (SKIP, 0, 0)
                 except IndexError:
-                    raise PreprocessError("#elif stmt without leading #if "\
+                    raise PreprocessorError("#elif stmt without leading #if "\
                                           "stmt", defines['__FILE__'],
                                           defines['__LINE__'], line)
             elif op == "else":
                 try:
                     if states[-1][2]: # already had #else in this if-block
-                        raise PreprocessError("illegal #else after #else in "\
+                        raise PreprocessorError("illegal #else after #else in "\
                                               "same #if block",
                                               defines['__FILE__'],
                                               defines['__LINE__'], line)
@@ -488,20 +510,20 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                     else:
                         states[-1] = (EMIT, 1, 1)
                 except IndexError:
-                    raise PreprocessError("#else stmt without leading #if "\
+                    raise PreprocessorError("#else stmt without leading #if "\
                                           "stmt", defines['__FILE__'],
                                           defines['__LINE__'], line)
             elif op == "endif":
                 try:
                     states.pop()
                 except IndexError:
-                    raise PreprocessError("#endif stmt without leading #if"\
+                    raise PreprocessorError("#endif stmt without leading #if"\
                                           "stmt", defines['__FILE__'],
                                           defines['__LINE__'], line)
             elif op == "error":
                 if not (states and states[-1][0] == SKIP):
                     error = match.group("error")
-                    raise PreprocessError("#error: " + error,
+                    raise PreprocessorError("#error: " + error,
                                           defines['__FILE__'],
                                           defines['__LINE__'], line)
             log.debug("states: %r", states)
@@ -526,14 +548,14 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                 else:
                     log.debug("skip line (%s)" % states[-1][1])
             except IndexError:
-                raise PreprocessError("superfluous #endif before this line",
+                raise PreprocessorError("superfluous #endif before this line",
                                       defines['__FILE__'],
                                       defines['__LINE__'])
     if len(states) > 1:
-        raise PreprocessError("unterminated #if block", defines['__FILE__'],
+        raise PreprocessorError("unterminated #if block", defines['__FILE__'],
                               defines['__LINE__'])
     elif len(states) < 1:
-        raise PreprocessError("superfluous #endif on or before this line",
+        raise PreprocessorError("superfluous #endif on or before this line",
                               defines['__FILE__'], defines['__LINE__'])
 
     if fout != outfile:
@@ -544,7 +566,7 @@ def preprocess(infile, outfile=sys.stdout, defines={},
 
 #---- content-type handling
 
-_gDefaultContentTypes = """
+DEFAULT_CONTENT_TYPES = """
     # Default file types understood by "pepe.py".
     #
     # Format is an extension of 'mime.types' file syntax.
@@ -618,12 +640,11 @@ class ContentTypesRegistry:
 
     Usage:
         >>> registry = ContentTypesRegistry()
-        >>> registry.getContentType("foo.py")
-        "Python"
+        >>> assert registry.get_content_type("pepe.py") == "Python"
     """
 
-    def __init__(self, contentTypesPaths=None):
-        self.contentTypesPaths = contentTypesPaths
+    def __init__(self, content_types_config_files=None):
+        self.content_types_config_files = content_types_config_files or []
         self._load()
 
     def _load(self):
@@ -633,12 +654,12 @@ class ContentTypesRegistry:
         self.regexMap = {}
         self.filenameMap = {}
 
-        self._loadContentType(_gDefaultContentTypes)
+        self._loadContentType(DEFAULT_CONTENT_TYPES)
         localContentTypesPath = join(dirname(__file__), "content.types")
         if exists(localContentTypesPath):
             log.debug("load content types file: `%r'" % localContentTypesPath)
             self._loadContentType(open(localContentTypesPath, 'r').read())
-        for path in (self.contentTypesPaths or []):
+        for path in self.content_types_config_files:
             log.debug("load content types file: `%r'" % path)
             self._loadContentType(open(path, 'r').read())
 
@@ -660,7 +681,7 @@ class ContentTypesRegistry:
             contentType, patterns = words[0], words[1:]
             if not patterns:
                 if line[-1] == '\n': line = line[:-1]
-                raise PreprocessError("bogus content.types line, there must "\
+                raise PreprocessorError("bogus content.types line, there must "\
                                       "be one or more patterns: '%s'" % line)
             for pattern in patterns:
                 if pattern.startswith('.'):
@@ -673,7 +694,7 @@ class ContentTypesRegistry:
                 else:
                     self.filenameMap[pattern] = contentType
 
-    def getContentType(self, path):
+    def get_content_type(self, path):
         """Return a content type for the given path.
 
         @param path {str} The path of file for which to guess the
@@ -721,31 +742,6 @@ def getDefaultContentTypesRegistry():
         _gDefaultContentTypesRegistry = ContentTypesRegistry()
     return _gDefaultContentTypesRegistry
 
-
-#---- internal support stuff
-#TODO: move other internal stuff down to this section
-
-try:
-    reversed
-except NameError:
-    # 'reversed' added in Python 2.4 (http://www.python.org/doc/2.4/whatsnew/node7.html)
-    def reversed(seq):
-        rseq = list(seq)
-        rseq.reverse()
-        for item in rseq:
-            yield item
-try:
-    sorted
-except NameError:
-    # 'sorted' added in Python 2.4. Note that I'm only implementing enough
-    # of sorted as is used in this module.
-    def sorted(seq, key=None):
-        identity = lambda x: x
-        key_func = (key or identity)
-        sseq = list(seq)
-        sseq.sort(lambda self, other: cmp(key_func(self), key_func(other)))
-        for item in sseq:
-            yield item
 
 
 def parse_command_line():
@@ -960,7 +956,7 @@ def main():
     infile = args.input_file
 
     try:
-        contentTypesRegistry = ContentTypesRegistry(
+        content_types_registry = ContentTypesRegistry(
             args.content_types_config_files)
         preprocess(infile,
                    outfile,
@@ -969,8 +965,8 @@ def main():
                    args.should_keep_lines,
                    args.include_paths,
                    args.should_substitute,
-                   contentTypesRegistry=contentTypesRegistry)
-    except PreprocessError, ex:
+                   contentTypesRegistry=content_types_registry)
+    except PreprocessorError, ex:
         if log.isDebugEnabled():
             import traceback
 
