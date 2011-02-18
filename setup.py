@@ -4,48 +4,62 @@
 # Copyright (c) 2002-2005 ActiveState Software Ltd.
 # Copyright (C) 2011 Yesudeep Mangalapilly <yesudeep@gmail.com>
 
-"""pepe: a multi-language preprocessor
+"""pepe: a multi-language preprocessor"""
 
-There are millions of templating systems out there (most of them
-developed for the web). This isn't one of those, though it does share
-some basics: a markup syntax for templates that are processed to give
-resultant text output.  The main difference with `pepe.py` is
-that its syntax is hidden in comments (whatever the syntax for comments
-maybe in the target file type) so that the file can still have valid
-syntax. A comparison with the C preprocessor is more apt.
-
-`pepe.py` is targeted at build systems that deal with many
-types of files. Languages for which it works include: C++, Python,
-Perl, Tcl, XML, JavaScript, CSS, IDL, TeX, Fortran, PHP, Java, Shell
-scripts (Bash, CSH, etc.) and C#. Pepe is usable both as a
-command line app and as a Python module.
-"""
-
+import os
+import sys
 import imp
 from setuptools import setup
 
 pepe = imp.load_source('pepe', 'pepe.py')
 
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python",
-    "Operating System :: OS Independent",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Text Processing :: Filters",
-]
+def read_file(filename):
+    """
+    Reads the contents of a given file relative to the directory
+    containing this file and returns it.
 
-doclines = __doc__.split("\n")
+    :param filename:
+        The file to open and read contents from.
+    """
+    return open(os.path.join(os.path.dirname(__file__), filename)).read()
+
+
+if sys.version_info < (3,):
+    extra = {}
+else:
+    extra = dict(use_2to3=True)
+
+install_requires = []
+if sys.version_info < (2, 7, 0):
+# argparse is merged into Python 2.7 in the Python 2x series
+# and Python 3.2 in the Python 3x series.
+    install_requires.append('argparse >=1.1')
 
 setup(
     name="pepe",
     version=pepe.__version__,
+    description="Portable multi-language file preprocessor",
+    long_description=read_file('README'),
+    author="Trent Mick",
+    author_email="trentm@gmail.com",
     maintainer="Yesudeep Mangalapilly",
     maintainer_email="yesudeep@gmail.com",
     url="http://github.com/gorakhargosh/pepe",
     license="MIT License",
     platforms=["any"],
+    classifiers="""Development Status :: 5 - Production/Stable
+Intended Audience :: Developers
+License :: OSI Approved :: MIT License
+Programming Language :: Python
+Operating System :: OS Independent
+Topic :: Software Development :: Libraries :: Python Modules
+Topic :: Text Processing :: Filters""".split("\n"),
+    keywords=' '.join(["python",
+                       "preprocessor",
+                       "pepe",
+                       "preprocess",
+                       "portable",
+                       ]),
     py_modules=["pepe"],
     entry_points={
         'console_scripts': [
@@ -53,7 +67,6 @@ setup(
             ]
         },
     zip_safe=False,
-    description=doclines[0],
-    classifiers=classifiers,
-    long_description="\n".join(doclines[2:]),
+    install_requires=install_requires,
+    **extra
     )
