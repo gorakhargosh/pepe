@@ -777,6 +777,8 @@ def parse_command_line():
                         help="Enables verbose logging")
     parser.add_argument('-l',
                         '--log-level',
+                        '--logging-level',
+                        dest='logging_level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default='INFO',
                         help="Logging level.")
