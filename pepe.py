@@ -751,7 +751,7 @@ except NameError:
 
 def parse_command_line():
     """\
-    Parses the command line and returns a Namespace object
+    Parses the command line and returns a ``Namespace`` object
     containing options and their values.
     """
 
@@ -891,10 +891,10 @@ def parse_definitions(definitions):
 
         Examples of command line arguments being parsed to tables:
         ----------------------------------------------------------
-        -D DEBUG=1                      ->    {'DEBUG': 1}
-        -D FOOBAR=0x40 -D DEBUG=false   ->    {'DEBUG': False, 'FOOBAR': 64}
-        -D FOOBAR=whatever              ->    {'FOOBAR': 'whatever'}
-        -D FOOBAR                       ->    {'FOOBAR': None}
+        ['DEBUG=1']                      ->    {'DEBUG': 1}
+        ['FOOBAR=0x40', 'DEBUG=false']   ->    {'DEBUG': False, 'FOOBAR': 64}
+        ['FOOBAR=whatever']              ->    {'FOOBAR': 'whatever'}
+        ['FOOBAR']                       ->    {'FOOBAR': None}
 
     :return:
         ``dict`` as symbol table.
