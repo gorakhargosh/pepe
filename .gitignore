@@ -1,6 +1,7 @@
 *~
 *.py[co]
 
+bin/
 .svn/
 .idea/
 
