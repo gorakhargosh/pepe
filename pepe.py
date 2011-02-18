@@ -8,38 +8,6 @@
 """\
 Pepe: Portable multi-language preprocessor.
 
-Command Line Usage:
-    pepe [<options>...] <infile>
-
-Options:
-    -h, --help      Print this help and exit.
-    -V, --version   Print the version info and exit.
-    -v, --verbose   Give verbose output for errors.
-
-    -o <outfile>    Write output to the given file instead of to stdout.
-    -f, --force     Overwrite given output file. (Otherwise an IOError
-                    will be raised if <outfile> already exists.
-    -D <define>     Define a variable for preprocessing. <define>
-                    can simply be a variable name (in which case it
-                    will be true) or it can be of the form
-                    <var>=<val>. An attempt will be made to convert
-                    <val> to an integer so "-D FOO=0" will create a
-                    false value.
-    -I <dir>        Add an directory to the include path for
-                    #include directives.
-
-    -k, --keep-lines    Emit empty lines for preprocessor statement
-                    lines and skipped output lines. This allows line
-                    numbers to stay constant.
-    -s, --substitute    Substitute defines into emitted lines. By
-                    default substitution is NOT done because it
-                    currently will substitute into program strings.
-    -c, --content-types-path <path>
-                    Specify a path to a content.types file to assist
-                    with file type determination. See the
-                    `_gDefaultContentTypes` string in this file for
-                    details on its format.
-
 Module Usage:
     from pepe import preprocess
     preprocess(infile, outfile=sys.stdout, defines={}, force=0,
@@ -113,16 +81,6 @@ Preprocessor Syntax
 - Special built-in methods for expressions:
     defined(varName)    Return true if given variable is defined.
 
-
-Tips
-----
-
-A suggested file naming convention is to let input files to
-pepe be of the form <basename>.p.<ext> and direct the output
-of pepe to <basename>.<ext>, e.g.:
-    pepe -o foo.py foo.p.py
-The advantage is that other tools (esp. editors) will still
-recognize the unpreprocessed file as the original language.
 """
 import argparse
 
