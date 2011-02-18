@@ -798,7 +798,7 @@ will be true) or it can be of the form
 false value.""")
     parser.add_argument('-I',
                         '--include',
-                        dest='include_dir',
+                        dest='include_paths',
                         action='append',
                         default=['.'],
                         help='Add a directory to the include path for #include directives.')
@@ -940,8 +940,6 @@ def main():
     args = parse_command_line()
 
     defines = parse_definitions(args.definitions)
-    include_path = []
-    content_types_path = []
 
     if args.should_be_verbose:
         log.setLevel(log.DEBUG)
@@ -949,13 +947,13 @@ def main():
     infile = args.input_file
 
     try:
-        contentTypesRegistry = ContentTypesRegistry(content_types_path)
+        contentTypesRegistry = ContentTypesRegistry(args.content_types_config_files)
         preprocess(infile,
                    outfile,
                    defines,
                    args.should_force_overwrite,
                    args.should_keep_lines,
-                   include_path,
+                   args.include_paths,
                    args.should_substitute,
                    contentTypesRegistry=contentTypesRegistry)
     except PreprocessError, ex:
