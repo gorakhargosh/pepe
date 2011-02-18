@@ -31,7 +31,7 @@ classifiers = [
     "Programming Language :: Python",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Text Processing :: Filters",    
+    "Topic :: Text Processing :: Filters",
 ]
 
 doclines = __doc__.split("\n")
@@ -48,10 +48,10 @@ setup(
     entry_points={
         'console_scripts': [
             'pepe = pepe:main',
-        ]
-    },
+            ]
+        },
     zip_safe=False,
     description=doclines[0],
     classifiers=classifiers,
     long_description="\n".join(doclines[2:]),
-)
+    )

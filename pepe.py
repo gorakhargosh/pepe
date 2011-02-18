@@ -47,7 +47,7 @@
     of the form:
         <comment-prefix> <preprocessor-statement> <comment-suffix>
     where the <comment-prefix/suffix> are the native comment delimiters for
-    that file type. 
+    that file type.
 
 
     Examples
@@ -58,7 +58,7 @@
         <!-- #if FOO -->
         ...
         <!-- #endif -->
-    
+
     Python (*.py), Perl (*.pl), Tcl (*.tcl), Ruby (*.rb), Bash (*.sh),
     or make ([Mm]akefile*) files:
 
@@ -108,7 +108,7 @@
       error to refer to a variable that has not been defined by a -D
       option or by an in-content #define.
     - Special built-in methods for expressions:
-        defined(varName)    Return true if given variable is defined.  
+        defined(varName)    Return true if given variable is defined.
 
 
     Tips
@@ -143,6 +143,7 @@ class PreprocessError(Exception):
         self.lineno = lineno
         self.line = line
         Exception.__init__(self, errmsg, file, lineno, line)
+
     def __str__(self):
         s = ""
         if self.file is not None:
@@ -157,7 +158,6 @@ class PreprocessError(Exception):
         return s
 
 
-
 #---- global data
 
 # Comment delimiter info.
@@ -166,26 +166,26 @@ class PreprocessError(Exception):
 #   be a string (in which case it is transformed into a pattern allowing
 #   whitespace on either side) or a compiled regex.
 _commentGroups = {
-    "Python":     [ ('#', '') ],
-    "Perl":       [ ('#', '') ],
-    "PHP":        [ ('/*', '*/'), ('//', ''), ('#', '') ],
-    "Ruby":       [ ('#', '') ],
-    "Tcl":        [ ('#', '') ],
-    "Shell":      [ ('#', '') ],
+    "Python": [('#', '')],
+    "Perl": [('#', '')],
+    "PHP": [('/*', '*/'), ('//', ''), ('#', '')],
+    "Ruby": [('#', '')],
+    "Tcl": [('#', '')],
+    "Shell": [('#', '')],
     # Allowing for CSS and JavaScript comments in XML/HTML.
-    "XML":        [ ('<!--', '-->'), ('/*', '*/'), ('//', '') ],
-    "HTML":       [ ('<!--', '-->'), ('/*', '*/'), ('//', '') ],
-    "Makefile":   [ ('#', '') ],
-    "JavaScript": [ ('/*', '*/'), ('//', '') ],
-    "CSS":        [ ('/*', '*/') ],
-    "C":          [ ('/*', '*/') ],
-    "C++":        [ ('/*', '*/'), ('//', '') ],
-    "Java":       [ ('/*', '*/'), ('//', '') ],
-    "C#":         [ ('/*', '*/'), ('//', '') ],
-    "IDL":        [ ('/*', '*/'), ('//', '') ],
-    "Text":       [ ('#', '') ],
-    "Fortran":    [ (re.compile(r'^[a-zA-Z*$]\s*'), ''), ('!', '') ],
-    "TeX":        [ ('%', '') ],
+    "XML": [('<!--', '-->'), ('/*', '*/'), ('//', '')],
+    "HTML": [('<!--', '-->'), ('/*', '*/'), ('//', '')],
+    "Makefile": [('#', '')],
+    "JavaScript": [('/*', '*/'), ('//', '')],
+    "CSS": [('/*', '*/')],
+    "C": [('/*', '*/')],
+    "C++": [('/*', '*/'), ('//', '')],
+    "Java": [('/*', '*/'), ('//', '')],
+    "C#": [('/*', '*/'), ('//', '')],
+    "IDL": [('/*', '*/'), ('//', '')],
+    "Text": [('#', '')],
+    "Fortran": [(re.compile(r'^[a-zA-Z*$]\s*'), ''), ('!', '')],
+    "TeX": [('%', '')],
 }
 
 
@@ -194,6 +194,7 @@ _commentGroups = {
 
 class _Logger:
     DEBUG, INFO, WARN, ERROR, CRITICAL = range(5)
+
     def __init__(self, name, level=None, streamOrFileName=sys.stderr):
         self._name = name
         if level is None:
@@ -206,13 +207,17 @@ class _Logger:
         else:
             self.stream = streamOrFileName
             self._opennedStream = 0
+
     def __del__(self):
         if self._opennedStream:
             self.stream.close()
+
     def getLevel(self):
         return self.level
+
     def setLevel(self, level):
         self.level = level
+
     def _getLevelName(self, level):
         levelNameMap = {
             self.DEBUG: "DEBUG",
@@ -222,13 +227,20 @@ class _Logger:
             self.CRITICAL: "CRITICAL",
         }
         return levelNameMap[level]
+
     def isEnabled(self, level):
         return level >= self.level
+
     def isDebugEnabled(self): return self.isEnabled(self.DEBUG)
+
     def isInfoEnabled(self): return self.isEnabled(self.INFO)
+
     def isWarnEnabled(self): return self.isEnabled(self.WARN)
+
     def isErrorEnabled(self): return self.isEnabled(self.ERROR)
+
     def isFatalEnabled(self): return self.isEnabled(self.FATAL)
+
     def log(self, level, msg, *args):
         if level < self.level:
             return
@@ -236,14 +248,19 @@ class _Logger:
         message = message + (msg % args) + "\n"
         self.stream.write(message)
         self.stream.flush()
+
     def debug(self, msg, *args):
         self.log(self.DEBUG, msg, *args)
+
     def info(self, msg, *args):
         self.log(self.INFO, msg, *args)
+
     def warn(self, msg, *args):
         self.log(self.WARN, msg, *args)
+
     def error(self, msg, *args):
         self.log(self.ERROR, msg, *args)
+
     def fatal(self, msg, *args):
         self.log(self.CRITICAL, msg, *args)
 
@@ -260,7 +277,7 @@ def _evaluate(expr, defines):
     """
     #interpolated = _interpolate(s, defines)
     try:
-        rv = eval(expr, {'defined':lambda v: v in defines}, defines)
+        rv = eval(expr, {'defined': lambda v: v in defines}, defines)
     except Exception, ex:
         msg = str(ex)
         if msg.startswith("name '") and msg.endswith("' is not defined"):
@@ -283,7 +300,7 @@ def _evaluate(expr, defines):
 #---- module API
 
 def preprocess(infile, outfile=sys.stdout, defines={},
-               force=0, keepLines=0, includePath=[], substitute=0, 
+               force=0, keepLines=0, includePath=[], substitute=0,
                contentType=None, contentTypesRegistry=None,
                __preprocessedFiles=None):
     """Preprocess the given file.
@@ -312,7 +329,7 @@ def preprocess(infile, outfile=sys.stdout, defines={},
     Returns the modified dictionary of defines or raises PreprocessError if
     there was some problem.
     """
-    if __preprocessedFiles is None: 
+    if __preprocessedFiles is None:
         __preprocessedFiles = []
     log.info("preprocess(infile=%r, outfile=%r, defines=%r, force=%r, "\
              "keepLines=%r, includePath=%r, contentType=%r, "\
@@ -358,7 +375,7 @@ def preprocess(infile, outfile=sys.stdout, defines={},
              '#\s*(?P<op>undef)\s+(?P<var>[^\s]*?)',
              '#\s*(?P<op>include)\s+"(?P<fname>.*?)"',
              r'#\s*(?P<op>include)\s+(?P<var>[^\s]+?)',
-            ]
+    ]
     patterns = []
     for stmt in stmts:
         # The comment group prefix and suffix can either be just a
@@ -392,8 +409,8 @@ def preprocess(infile, outfile=sys.stdout, defines={},
 
     defines['__FILE__'] = infile
     SKIP, EMIT = range(2) # states
-    states = [(EMIT,   # a state is (<emit-or-skip-lines-in-this-section>,
-               0,      #             <have-emitted-in-this-if-block>,
+    states = [(EMIT, # a state is (<emit-or-skip-lines-in-this-section>,
+               0, #             <have-emitted-in-this-if-block>,
                0)]     #             <have-seen-'else'-in-this-if-block>)
     lineNum = 0
     for line in lines:
@@ -441,7 +458,7 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                     else:
                         # This is the first include form: #include "path"
                         f = match.group("fname")
-                        
+
                     for d in [os.path.dirname(infile)] + includePath:
                         fname = os.path.normpath(os.path.join(d, f))
                         if os.path.exists(fname):
@@ -452,7 +469,8 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                                               % (f, includePath))
                     defines = preprocess(fname, fout, defines, force,
                                          keepLines, includePath, substitute,
-                                         contentTypesRegistry=contentTypesRegistry, 
+                                         contentTypesRegistry=contentTypesRegistry
+                                         ,
                                          __preprocessedFiles=__preprocessedFiles)
             elif op in ("if", "ifdef", "ifndef"):
                 if op == "if":
@@ -478,8 +496,9 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                 try:
                     if states[-1][2]: # already had #else in this if-block
                         raise PreprocessError("illegal #elif after #else in "\
-                            "same #if block", defines['__FILE__'],
-                            defines['__LINE__'], line)
+                                              "same #if block",
+                                              defines['__FILE__'],
+                                              defines['__LINE__'], line)
                     elif states[-1][1]: # if have emitted in this if-block
                         states[-1] = (SKIP, 1, 0)
                     elif states[:-1] and states[-2][0] == SKIP:
@@ -497,8 +516,9 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                 try:
                     if states[-1][2]: # already had #else in this if-block
                         raise PreprocessError("illegal #else after #else in "\
-                            "same #if block", defines['__FILE__'],
-                            defines['__LINE__'], line)
+                                              "same #if block",
+                                              defines['__FILE__'],
+                                              defines['__LINE__'], line)
                     elif states[-1][1]: # if have emitted in this if-block
                         states[-1] = (SKIP, 1, 1)
                     elif states[:-1] and states[-2][0] == SKIP:
@@ -520,7 +540,8 @@ def preprocess(infile, outfile=sys.stdout, defines={},
             elif op == "error":
                 if not (states and states[-1][0] == SKIP):
                     error = match.group("error")
-                    raise PreprocessError("#error: "+error, defines['__FILE__'],
+                    raise PreprocessError("#error: " + error,
+                                          defines['__FILE__'],
                                           defines['__LINE__'], line)
             log.debug("states: %r", states)
             if keepLines:
@@ -662,7 +683,7 @@ class ContentTypesRegistry:
 
     def _loadContentType(self, content, path=None):
         """Return the registry for the given content.types file.
-       
+
         The registry is three mappings:
             <suffix> -> <content type>
             <regex> -> <content type>
@@ -706,7 +727,7 @@ class ContentTypesRegistry:
             contentType = self.filenameMap[basename]
             log.debug("Content type of '%s' is '%s' (determined from full "\
                       "path).", path, contentType)
-        # Try to determine from the suffix.
+            # Try to determine from the suffix.
         if not contentType and '.' in basename:
             suffix = "." + basename.split(".")[-1]
             if sys.platform.startswith("win"):
@@ -716,21 +737,23 @@ class ContentTypesRegistry:
                 contentType = self.suffixMap[suffix]
                 log.debug("Content type of '%s' is '%s' (determined from "\
                           "suffix '%s').", path, contentType, suffix)
-        # Try to determine from the registered set of regex patterns.
+            # Try to determine from the registered set of regex patterns.
         if not contentType:
             for regex, ctype in self.regexMap.items():
                 if regex.search(basename):
                     contentType = ctype
-                    log.debug("Content type of '%s' is '%s' (matches regex '%s')",
-                              path, contentType, regex.pattern)
+                    log.debug(
+                        "Content type of '%s' is '%s' (matches regex '%s')",
+                        path, contentType, regex.pattern)
                     break
-        # Try to determine from the file contents.
+            # Try to determine from the file contents.
         content = open(path, 'rb').read()
         if content.startswith("<?xml"):  # cheap XML sniffing
             contentType = "XML"
         return contentType
 
 _gDefaultContentTypesRegistry = None
+
 def getDefaultContentTypesRegistry():
     global _gDefaultContentTypesRegistry
     if _gDefaultContentTypesRegistry is None:
@@ -769,8 +792,9 @@ except NameError:
 def main(argv):
     try:
         optlist, args = getopt.getopt(argv[1:], 'hVvo:D:fkI:sc:',
-            ['help', 'version', 'verbose', 'force', 'keep-lines',
-             'substitute', 'content-types-path='])
+                                      ['help', 'version', 'verbose', 'force',
+                                       'keep-lines',
+                                       'substitute', 'content-types-path='])
     except getopt.GetoptError, msg:
         sys.stderr.write("pepe: error: %s. Your invocation was: %s\n"\
                          % (msg, argv))
@@ -829,6 +853,7 @@ def main(argv):
     except PreprocessError, ex:
         if log.isDebugEnabled():
             import traceback
+
             traceback.print_exc(file=sys.stderr)
         else:
             sys.stderr.write("pepe: error: %s\n" % str(ex))
@@ -836,5 +861,5 @@ def main(argv):
 
 if __name__ == "__main__":
     __file__ = sys.argv[0]
-    sys.exit( main(sys.argv) )
+    sys.exit(main(sys.argv))
 
