@@ -10,7 +10,7 @@ Pepe syntax mimics that of the C preprocessor, but its behavior differs.
 
 Who is it for?
 --------------
-Pepe is targeted at build systems that deal with many types of files.
+Pepe is targeted at **build systems** that deal with many types of files.
 Languages for which it works include:
 
 * C++
@@ -30,7 +30,7 @@ Languages for which it works include:
 
 History
 -------
-Pepe began as a fork of Trent Mick's preprocess.py which has been used for
+Pepe began as a fork of Trent Mick's preprocess_ which has been used for
 build-time code differentiation in the Komodo_ build system, which
 includes source code in Python, JavaScript, XML, CSS, Perl, and C/C++.
 
@@ -106,6 +106,6 @@ Using as a shell command::
 Pepe can also be used as a module. Please see the documentation_
 for more information.
 
-
+.. _preproces: http://code.google.com/p/preprocess/
 .. _Komodo: http://www.activestate.com/Komodo
 .. _documentation: http://packages.python.org/pepe/
