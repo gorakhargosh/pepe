@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # Copyright (c) 2002-2008 ActiveState Software Inc.
+# Copyright (C) 2011 Yesudeep Mangalapilly <yesudeep@gmail.com>
 # License: MIT License (http://www.opensource.org/licenses/mit-license.php)
 
 """
