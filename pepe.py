@@ -750,7 +750,7 @@ except NameError:
 
 #---- mainline
 
-def main():
+def parse_command_line():
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -782,7 +782,8 @@ def main():
                         help='Force overwrite existing output file.')
     parser.add_argument('-D',
                         '--define',
-                        dest='definition',
+                        metavar="DEFINITION",
+                        dest='definitions',
                         action='append',
                         help="""\
 Define a variable for preprocessing. <define>
@@ -822,7 +823,64 @@ Specify a path to a content.types file to assist
 with file type determination. See the
 `_gDefaultContentTypes` string in this file for
 details on its format.""")
-    parser.parse_args()
+    return parser.parse_args()
+
+def parse_int(string):
+    """\
+    Parses a string to convert it to an integer based on the format used:
+
+    * "0x40" will be converted to 64 (hexadecimal)
+    * "040" will be converted to 32 (octal)
+    * "40" will be converted to 40 (decimal)
+    * Anything else is left unprocessed and a ``ValueError`` will be raised.
+
+    :param string:
+        The string to convert to an integer.
+    :type string:
+        ``str``
+    """
+    if string.startswith("0x") or string.startswith("0X"):
+        return int(string, 16)
+    elif string.startswith("0"):
+        return int(string, 8)
+    else:
+        return int(string)
+
+def parse_bool(string):
+    """\
+    Parses a string to convert it to its equivalent boolean value or
+    leaves the string intact if it cannot.
+
+    :param string:
+        String to convert to ``True`` or ``False``.
+    :type string:
+        ``str``
+    """
+    string = string.lower()
+    if string == "true":
+        return True
+    elif string == "false":
+        return False
+    else:
+        return string
+
+def main():
+    args = parse_command_line()
+
+    defines = {}
+
+    for definition in args.definitions:
+        try:
+            define, value = definition.split('=', 1)
+            try:
+                value = float(value) if '.' in value else parse_int(value)
+            except ValueError:
+                value = parse_bool(value)
+        except ValueError:
+            define, value = definition, None
+        defines[define] = value
+
+    print(defines)
 
 def old_main(argv):
     try:
@@ -840,8 +898,8 @@ def old_main(argv):
     force = 0
     keepLines = 0
     substitute = 0
-    includePath = []
-    contentTypesPaths = []
+    include_path = []
+    content_types_path = []
     for opt, optarg in optlist:
         if opt in ('-h', '--help'):
             sys.stdout.write(__doc__)
@@ -868,11 +926,11 @@ def old_main(argv):
         elif opt in ('-k', '--keep-lines'):
             keepLines = 1
         elif opt == '-I':
-            includePath.append(optarg)
+            include_path.append(optarg)
         elif opt in ('-s', '--substitute'):
             substitute = 1
         elif opt in ('-c', '--content-types-path'):
-            contentTypesPaths.append(optarg)
+            content_types_path.append(optarg)
 
     if len(args) != 1:
         sys.stderr.write("pepe: error: incorrect number of "\
@@ -882,8 +940,8 @@ def old_main(argv):
         infile = args[0]
 
     try:
-        contentTypesRegistry = ContentTypesRegistry(contentTypesPaths)
-        preprocess(infile, outfile, defines, force, keepLines, includePath,
+        contentTypesRegistry = ContentTypesRegistry(content_types_path)
+        preprocess(infile, outfile, defines, force, keepLines, include_path,
                    substitute, contentTypesRegistry=contentTypesRegistry)
     except PreprocessError, ex:
         if log.isDebugEnabled():
