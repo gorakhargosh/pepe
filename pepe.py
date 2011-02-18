@@ -807,7 +807,7 @@ lines and skipped output lines. This allows line
 numbers to stay constant.''')
     parser.add_argument('-s',
                         '--substitute',
-                        dest='should_subsitute',
+                        dest='should_substitute',
                         action='store_true',
                         default=False,
                         help='''\
