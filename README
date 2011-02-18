@@ -1,38 +1,20 @@
-preprocess.py -- a portable multi-language file preprocessor
+pepe -- a portable multi-language file preprocessor
 ============================================================
 
-Download the latest preprocess.py packages from here:
-    (archive) http://preprocess.googlecode.com/files/preprocess-1.1.0.zip
+    $ pip install pepe
 
-
-Home            : http://trentm.com/projects/preprocess/
-License         : MIT (see LICENSE.txt)
-Platforms       : Windows, Linux, Mac OS X, Unix
-Current Version : 1.1
-Dev Status      : Fairly mature, has been used in the Komodo build system for
-                  over 7 years.
-Requirements    : Python >= 2.3 (http://www.activestate.com/ActivePython/)
-
-
-What's new?
------------
-
-Support has been added for preprocessing TeX, Fortran, C#, Java, Shell
-script and PHP files. See the [Change Log](#changelog) below for more.
-
-
-Why preprocess.py?
+Why pepe.py?
 ------------------
 
 There are millions of templating systems out there (most of them
 developed for the web). This isn't one of those, though it does share
 some basics: a markup syntax for templates that are processed to give
-resultant text output.  The main difference with `preprocess.py` is
+resultant text output.  The main difference with `pepe.py` is
 that its syntax is hidden in comments (whatever the syntax for comments
 maybe in the target filetype) so that the file can still have valid
 syntax. A comparison with the C preprocessor is more apt.
 
-`preprocess.py` is targetted at build systems that deal with many
+`pepe.py` is targeted at build systems that deal with many
 types of files. Languages for which it works include: C++, Python,
 Perl, Tcl, XML, JavaScript, CSS, IDL, TeX, Fortran, PHP, Java, Shell
 scripts (Bash, CSH, etc.) and C#. Preprocess is usable both as a
@@ -44,7 +26,7 @@ language of the file being preprocessed). This way the preprocessor
 statements do not make an unpreprocessed file syntactically incorrect.
 For example:
 
-    preprocess -D FEATURES=macros,scc myapp.py
+    pepe -D FEATURES=macros,scc myapp.py
 
 will yield this transformation:
 
@@ -70,7 +52,7 @@ or, with a JavaScript file:
     // #endif
     ...                                     ...
 
-Despite these contrived examples preprocess has proved useful for
+Despite these contrived examples pepe has proved useful for
 build-time code differentiation in the
 [Komodo](http://www.activestate.com/Komodo) build system -- which
 includes source code in Python, JavaScript, XML, CSS, Perl, and C/C++.
@@ -90,10 +72,10 @@ preprocessor statements are implemented:
     #error ERROR_STRING
     #include "FILE"
 
-As well, preprocess will do in-line substitution of defined variables.
+As well, pepe will do in-line substitution of defined variables.
 Although this is currently off by default because substitution will occur
 in program strings, which is not ideal. When a future version of
-preprocess can lex languages being preprocessed it will NOT substitute
+pepe can lex languages being preprocessed it will NOT substitute
 into program strings and substitution will be turned ON by default.
 
 Please send any feedback to [Trent Mick](mailto:trentm@google's mail
@@ -103,32 +85,32 @@ thing.com).
 Install Notes
 -------------
 
-Download the latest `preprocess` source package, unzip it, and run `python
+Download the latest `pepe` source package, unzip it, and run `python
 setup.py install`:
 
-    unzip preprocess-1.1.0.zip
-    cd preprocess-1.1.0
+    unzip pepe-1.1.0.zip
+    cd pepe-1.1.0
     python setup.py install
 
 If your install fails then please visit [the Troubleshooting
 FAQ](http://trentm.com/faq.html#troubleshooting-python-package-installation).
 
-This will install `preprocess.py` into your Python `site-packages` and
-also into your Python bin directory. If you can now run `preprocess`
+This will install `pepe.py` into your Python `site-packages` and
+also into your Python bin directory. If you can now run `pepe`
 and get a response then you are good to go, otherwise read on.
 
 The *problem* is that the Python bin directory is not always on your
 PATH on some operating systems -- notably Mac OS X. To finish the
-install on OS X either manually move 'preprocess' to somewhere on your
+install on OS X either manually move 'pepe' to somewhere on your
 PATH:
 
-    cp preprocess.py /usr/local/bin/preprocess
+    cp pepe.py /usr/local/bin/pepe
 
 or create a symlink to it (try one of these depending on your Python
 version):
 
-    ln -s /System/Library/Frameworks/Python.framework/Versions/2.3/bin/preprocess /usr/local/bin/preprocess
-    ln -s /Library/Frameworks/Python.framework/Versions/2.4/bin/preprocess /usr/local/bin/preprocess
+    ln -s /System/Library/Frameworks/Python.framework/Versions/2.3/bin/pepe /usr/local/bin/pepe
+    ln -s /Library/Frameworks/Python.framework/Versions/2.4/bin/pepe /usr/local/bin/pepe
 
 (Note: You'll probably need to prefix those commands with `sudo` and
 the exact paths may differ on your system.)
@@ -137,14 +119,14 @@ the exact paths may differ on your system.)
 Getting Started
 ---------------
 
-Once you have it install, run `preprocess --help` for full usage
+Once you have it install, run `pepe --help` for full usage
 information:
 
-    $ preprocess --help
+    $ pepe --help
     Preprocess a file.
 
     Command Line Usage:
-        preprocess [<options>...] <infile>
+        pepe [<options>...] <infile>
 
     Options:
         -h, --help      Print this help and exit.
@@ -171,7 +153,7 @@ information:
                         currently will substitute into program strings.
 
     Module Usage:
-        from preprocess import preprocess
+        from pepe import preprocess
         preprocess(infile, outfile=sys.stdout, defines={}, force=0,
                    keepLines=0, includePath=[], substitute=0)
 
@@ -244,14 +226,14 @@ information:
     ----
 
     A suggested file naming convention is to let input files to
-    preprocess be of the form <basename>.p.<ext> and direct the output
-    of preprocess to <basename>.<ext>, e.g.:
-        preprocess -o foo.py foo.p.py
+    pepe be of the form <basename>.p.<ext> and direct the output
+    of pepe to <basename>.<ext>, e.g.:
+        pepe -o foo.py foo.p.py
     The advantage is that other tools (esp. editors) will still
     recognize the unpreprocessed file as the original language.
 
 
-And, for module usage, read the preprocess.preprocess() docstring:
+And, for module usage, read the pepe.preprocess() docstring:
 
-    pydoc preprocess.preprocess
+    pydoc pepe.preprocess
 
