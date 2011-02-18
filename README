@@ -106,6 +106,6 @@ Using as a shell command::
 Pepe can also be used as a module. Please see the documentation_
 for more information.
 
-.. _preproces: http://code.google.com/p/preprocess/
+.. _preprocess: http://code.google.com/p/preprocess/
 .. _Komodo: http://www.activestate.com/Komodo
 .. _documentation: http://packages.python.org/pepe/
