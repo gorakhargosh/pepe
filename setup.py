@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 # Copyright (c) 2002-2005 ActiveState Software Ltd.
 # Copyright (C) 2011 Yesudeep Mangalapilly <yesudeep@gmail.com>
 
