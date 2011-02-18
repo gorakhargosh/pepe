@@ -5,125 +5,126 @@
 # Copyright (C) 2011 Yesudeep Mangalapilly <yesudeep@gmail.com>
 # License: MIT License (http://www.opensource.org/licenses/mit-license.php)
 
+"""\
+Pepe: Portable multi-language preprocessor.
+
+Command Line Usage:
+    pepe [<options>...] <infile>
+
+Options:
+    -h, --help      Print this help and exit.
+    -V, --version   Print the version info and exit.
+    -v, --verbose   Give verbose output for errors.
+
+    -o <outfile>    Write output to the given file instead of to stdout.
+    -f, --force     Overwrite given output file. (Otherwise an IOError
+                    will be raised if <outfile> already exists.
+    -D <define>     Define a variable for preprocessing. <define>
+                    can simply be a variable name (in which case it
+                    will be true) or it can be of the form
+                    <var>=<val>. An attempt will be made to convert
+                    <val> to an integer so "-D FOO=0" will create a
+                    false value.
+    -I <dir>        Add an directory to the include path for
+                    #include directives.
+
+    -k, --keep-lines    Emit empty lines for preprocessor statement
+                    lines and skipped output lines. This allows line
+                    numbers to stay constant.
+    -s, --substitute    Substitute defines into emitted lines. By
+                    default substitution is NOT done because it
+                    currently will substitute into program strings.
+    -c, --content-types-path <path>
+                    Specify a path to a content.types file to assist
+                    with file type determination. See the
+                    `_gDefaultContentTypes` string in this file for
+                    details on its format.
+
+Module Usage:
+    from pepe import preprocess
+    preprocess(infile, outfile=sys.stdout, defines={}, force=0,
+               keepLines=0, includePath=[], substitute=0,
+               contentType=None)
+
+The <infile> can be marked up with special preprocessor statement lines
+of the form:
+    <comment-prefix> <preprocessor-statement> <comment-suffix>
+where the <comment-prefix/suffix> are the native comment delimiters for
+that file type.
+
+
+Examples
+--------
+
+HTML (*.htm, *.html) or XML (*.xml, *.kpf, *.xul) files:
+
+    <!-- #if FOO -->
+    ...
+    <!-- #endif -->
+
+Python (*.py), Perl (*.pl), Tcl (*.tcl), Ruby (*.rb), Bash (*.sh),
+or make ([Mm]akefile*) files:
+
+    # #if defined('FAV_COLOR') and FAV_COLOR == "blue"
+    ...
+    # #elif FAV_COLOR == "red"
+    ...
+    # #else
+    ...
+    # #endif
+
+C (*.c, *.h), C++ (*.cpp, *.cxx, *.cc, *.h, *.hpp, *.hxx, *.hh),
+Java (*.java), PHP (*.php) or C# (*.cs) files:
+
+    // #define FAV_COLOR 'blue'
+    ...
+    /* #ifndef FAV_COLOR */
+    ...
+    // #endif
+
+Fortran 77 (*.f) or 90/95 (*.f90) files:
+
+    C     #if COEFF == 'var'
+          ...
+    C     #endif
+
+And other languages.
+
+
+Preprocessor Syntax
+-------------------
+
+- Valid statements:
+    #define <var> [<value>]
+    #undef <var>
+    #ifdef <var>
+    #ifndef <var>
+    #if <expr>
+    #elif <expr>
+    #else
+    #endif
+    #error <error string>
+    #include "<file>"
+    #include <var>
+  where <expr> is any valid Python expression.
+- The expression after #if/elif may be a Python statement. It is an
+  error to refer to a variable that has not been defined by a -D
+  option or by an in-content #define.
+- Special built-in methods for expressions:
+    defined(varName)    Return true if given variable is defined.
+
+
+Tips
+----
+
+A suggested file naming convention is to let input files to
+pepe be of the form <basename>.p.<ext> and direct the output
+of pepe to <basename>.<ext>, e.g.:
+    pepe -o foo.py foo.p.py
+The advantage is that other tools (esp. editors) will still
+recognize the unpreprocessed file as the original language.
 """
-    Preprocess a file.
-
-    Command Line Usage:
-        pepe [<options>...] <infile>
-
-    Options:
-        -h, --help      Print this help and exit.
-        -V, --version   Print the version info and exit.
-        -v, --verbose   Give verbose output for errors.
-
-        -o <outfile>    Write output to the given file instead of to stdout.
-        -f, --force     Overwrite given output file. (Otherwise an IOError
-                        will be raised if <outfile> already exists.
-        -D <define>     Define a variable for preprocessing. <define>
-                        can simply be a variable name (in which case it
-                        will be true) or it can be of the form
-                        <var>=<val>. An attempt will be made to convert
-                        <val> to an integer so "-D FOO=0" will create a
-                        false value.
-        -I <dir>        Add an directory to the include path for
-                        #include directives.
-
-        -k, --keep-lines    Emit empty lines for preprocessor statement
-                        lines and skipped output lines. This allows line
-                        numbers to stay constant.
-        -s, --substitute    Substitute defines into emitted lines. By
-                        default substitution is NOT done because it
-                        currently will substitute into program strings.
-        -c, --content-types-path <path>
-                        Specify a path to a content.types file to assist
-                        with file type determination. See the
-                        `_gDefaultContentTypes` string in this file for
-                        details on its format.
-
-    Module Usage:
-        from pepe import preprocess
-        preprocess(infile, outfile=sys.stdout, defines={}, force=0,
-                   keepLines=0, includePath=[], substitute=0,
-                   contentType=None)
-
-    The <infile> can be marked up with special preprocessor statement lines
-    of the form:
-        <comment-prefix> <preprocessor-statement> <comment-suffix>
-    where the <comment-prefix/suffix> are the native comment delimiters for
-    that file type.
-
-
-    Examples
-    --------
-
-    HTML (*.htm, *.html) or XML (*.xml, *.kpf, *.xul) files:
-
-        <!-- #if FOO -->
-        ...
-        <!-- #endif -->
-
-    Python (*.py), Perl (*.pl), Tcl (*.tcl), Ruby (*.rb), Bash (*.sh),
-    or make ([Mm]akefile*) files:
-
-        # #if defined('FAV_COLOR') and FAV_COLOR == "blue"
-        ...
-        # #elif FAV_COLOR == "red"
-        ...
-        # #else
-        ...
-        # #endif
-
-    C (*.c, *.h), C++ (*.cpp, *.cxx, *.cc, *.h, *.hpp, *.hxx, *.hh),
-    Java (*.java), PHP (*.php) or C# (*.cs) files:
-
-        // #define FAV_COLOR 'blue'
-        ...
-        /* #ifndef FAV_COLOR */
-        ...
-        // #endif
-
-    Fortran 77 (*.f) or 90/95 (*.f90) files:
-
-        C     #if COEFF == 'var'
-              ...
-        C     #endif
-
-    And other languages.
-
-
-    Preprocessor Syntax
-    -------------------
-
-    - Valid statements:
-        #define <var> [<value>]
-        #undef <var>
-        #ifdef <var>
-        #ifndef <var>
-        #if <expr>
-        #elif <expr>
-        #else
-        #endif
-        #error <error string>
-        #include "<file>"
-        #include <var>
-      where <expr> is any valid Python expression.
-    - The expression after #if/elif may be a Python statement. It is an
-      error to refer to a variable that has not been defined by a -D
-      option or by an in-content #define.
-    - Special built-in methods for expressions:
-        defined(varName)    Return true if given variable is defined.
-
-
-    Tips
-    ----
-
-    A suggested file naming convention is to let input files to
-    pepe be of the form <basename>.p.<ext> and direct the output
-    of pepe to <basename>.<ext>, e.g.:
-        pepe -o foo.py foo.p.py
-    The advantage is that other tools (esp. editors) will still
-    recognize the unpreprocessed file as the original language.
-"""
+import argparse
 
 __version_info__ = (1, 1, 0)
 __version__ = '.'.join(map(str, __version_info__))
@@ -792,7 +793,79 @@ except NameError:
 
 #---- mainline
 
-def main(argv):
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument('-v',
+                        '--version',
+                        action='version',
+                        version='%(prog)s ' + __version__,
+                        help="Show version number and exit.")
+    parser.add_argument('input_file',
+                        metavar='INFILE',
+                        type=str,
+                        help='Path of the input file to be preprocessed')
+    parser.add_argument('-V',
+                        '--verbose',
+                        dest='should_be_verbose',
+                        action='store_true',
+                        default=False,
+                        help="Enables verbose logging")
+    parser.add_argument('-o',
+                        '--output',
+                        dest='output_file',
+                        default=sys.stdout,
+                        help='Output file name (default STDOUT)')
+    parser.add_argument('-f',
+                        '--force',
+                        dest='should_force_overwrite',
+                        action='store_true',
+                        default=False,
+                        help='Force overwrite existing output file.')
+    parser.add_argument('-D',
+                        '--define',
+                        dest='definition',
+                        action='append',
+                        help="""\
+Define a variable for preprocessing. <define>
+can simply be a variable name (in which case it
+will be true) or it can be of the form
+<var>=<val>. An attempt will be made to convert
+<val> to an integer so -D 'FOO=0' will create a
+false value.""")
+    parser.add_argument('-I',
+                        '--include',
+                        dest='include_dir',
+                        action='append',
+                        help='Add a directory to the include path for #include directives.')
+    parser.add_argument('-k',
+                        '--keep-lines',
+                        dest='should_keep_lines',
+                        action='store_true',
+                        default=False,
+                        help='''\
+Emit empty lines for preprocessor statement
+lines and skipped output lines. This allows line
+numbers to stay constant.''')
+    parser.add_argument('-s',
+                        '--substitute',
+                        dest='should_subsitute',
+                        action='store_true',
+                        default=False,
+                        help='''\
+Substitute #defines into emitted lines.
+(Disabled by default to avoid polluting strings''')
+    parser.add_argument('-c',
+                        '--content-types-path',
+                        '--content-types-config',
+                        dest='content_types_config',
+                        help="""\
+Specify a path to a content.types file to assist
+with file type determination. See the
+`_gDefaultContentTypes` string in this file for
+details on its format.""")
+    parser.parse_args()
+
+def old_main(argv):
     try:
         optlist, args = getopt.getopt(argv[1:], 'hVvo:D:fkI:sc:',
                                       ['help', 'version', 'verbose', 'force',
@@ -863,6 +936,8 @@ def main(argv):
         return 1
 
 if __name__ == "__main__":
-    __file__ = sys.argv[0]
-    sys.exit(main(sys.argv))
+    #__file__ = sys.argv[0]
+    #sys.exit(old_main(sys.argv))
+    main()
+
 
