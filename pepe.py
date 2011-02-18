@@ -843,17 +843,18 @@ def parse_int_token(string):
     :return:
         ``int`` or raises ``ValueError`` exception.
 
-    Usage:
-    >>> parse_int_token("0x40")
-    64
-    >>> parse_int_token("040")
-    32
-    >>> parse_int_token("40")
-    40
-    >>> parse_int_token("foobar")
-    Traceback (most recent call last):
-        ...
-    ValueError: invalid literal for int() with base 10: 'foobar'
+    Usage::
+
+        >>> parse_int_token("0x40")
+        64
+        >>> parse_int_token("040")
+        32
+        >>> parse_int_token("40")
+        40
+        >>> parse_int_token("foobar")
+        Traceback (most recent call last):
+            ...
+        ValueError: invalid literal for int() with base 10: 'foobar'
     """
     if string.startswith("0x") or string.startswith("0X"):
         return int(string, 16)
@@ -875,15 +876,16 @@ def parse_bool_token(token):
     :return:
         ``True`` or ``False`` or the token itself if not converted.
 
-    Usage:
-    >>> parse_bool_token('FAlse')
-    False
-    >>> parse_bool_token('FalS')
-    'FalS'
-    >>> parse_bool_token('true')
-    True
-    >>> parse_bool_token('TRUE')
-    True
+    Usage::
+
+        >>> parse_bool_token('FAlse')
+        False
+        >>> parse_bool_token('FalS')
+        'FalS'
+        >>> parse_bool_token('true')
+        True
+        >>> parse_bool_token('TRUE')
+        True
     """
     return {'true': True, 'false': False}.get(token.lower(), token)
 
@@ -903,17 +905,18 @@ def parse_definitions(definitions):
     :return:
         ``dict`` as symbol table.
 
-    Usage:
-    >>> parse_definitions(['DEBUG=1'])
-    {'DEBUG': 1}
-    >>> parse_definitions(['FOOBAR=0x40', 'DEBUG=false'])
-    {'DEBUG': False, 'FOOBAR': 64}
-    >>> parse_definitions(['FOOBAR=whatever'])
-    {'FOOBAR': 'whatever'}
-    >>> parse_definitions(['FOOBAR'])
-    {'FOOBAR': None}
-    >>> parse_definitions(['FOOBAR=ah=3'])
-    {'FOOBAR': 'ah=3'}
+    Usage::
+
+        >>> parse_definitions(['DEBUG=1'])
+        {'DEBUG': 1}
+        >>> parse_definitions(['FOOBAR=0x40', 'DEBUG=false'])
+        {'DEBUG': False, 'FOOBAR': 64}
+        >>> parse_definitions(['FOOBAR=whatever'])
+        {'FOOBAR': 'whatever'}
+        >>> parse_definitions(['FOOBAR'])
+        {'FOOBAR': None}
+        >>> parse_definitions(['FOOBAR=ah=3'])
+        {'FOOBAR': 'ah=3'}
     """
     defines = {}
     for definition in definitions:
