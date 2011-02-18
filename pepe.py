@@ -925,6 +925,10 @@ def parse_definitions(definitions):
         {'FOOBAR': None}
         >>> parse_definitions(['FOOBAR=ah=3'])
         {'FOOBAR': 'ah=3'}
+        >>> parse_definitions(None)
+        {}
+        >>> parse_definitions([])
+        {}
     """
     defines = {}
     if definitions:
