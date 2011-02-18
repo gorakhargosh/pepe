@@ -93,7 +93,8 @@ import re
 
 
 class PreprocessorError(Exception):
-    def __init__(self, error_message, filename=None, line_number=None, line=None):
+    def __init__(self, error_message, filename=None, line_number=None,
+                 line=None):
         self.error_message = error_message
         self.filename = filename
         self.line_number = line_number
@@ -257,62 +258,82 @@ def _evaluate(expr, defines):
 
 #---- module API
 
-def preprocess(infile, outfile=sys.stdout, defines={},
-               force=0, keepLines=0, includePath=[], substitute=0,
-               contentType=None, contentTypesRegistry=None,
-               __preprocessedFiles=None):
-    """Preprocess the given file.
+def preprocess(infile,
+               outfile=sys.stdout,
+               defines={},
+               should_force_overwrite=False,
+               should_keep_lines=False,
+               include_paths=[],
+               should_substitute=False,
+               content_type=None,
+               content_types_registry=None,
+               _preprocessed_files=None):
+    """\
+    Preprocesses the specified file.
 
-    "infile" is the input path.
-    "outfile" is the output path or stream (default is sys.stdout).
-    "defines" is a dictionary of defined variables that will be
+    :param infile:
+        The input path.
+    :param outfile:
+        The output path or stream (default is sys.stdout).
+    :param defines:
+        a dictionary of defined variables that will be
         understood in preprocessor statements. Keys must be strings and,
         currently, only the truth value of any key's value matters.
-    "force" will overwrite the given outfile if it already exists. Otherwise
+    :param should_force_overwrite:
+        will overwrite the given outfile if it already exists. Otherwise
         an IOError will be raise if the outfile already exists.
-    "keepLines" will cause blank lines to be emitted for preprocessor lines
+    :param should_keep_lines:
+        will cause blank lines to be emitted for preprocessor lines
         and content lines that would otherwise be skipped.
-    "includePath" is a list of directories to search for given #include
+    :param include_paths:
+        is a list of directories to search for given #include
         directives. The directory of the file being processed is presumed.
-    "substitute", if true, will allow substitution of defines into emitted
+    :param should_substitute:
+        if true, will allow substitution of defines into emitted
         lines. (NOTE: This substitution will happen within program strings
         as well. This may not be what you expect.)
-    "contentType" can be used to specify the content type of the input
+    :param content_type:
+        can be used to specify the content type of the input
         file. It not given, it will be guessed.
-    "contentTypesRegistry" is an instance of ContentTypesRegistry. If not specified
+    :param content_types_registry:
+        is an instance of ContentTypesRegistry. If not specified
         a default registry will be created.
-    "__preprocessedFiles" (for internal use only) is used to ensure files
+    :param _preprocessed_files:
+        (for internal use only) is used to ensure files
         are not recusively preprocessed.
 
-    Returns the modified dictionary of defines or raises PreprocessError if
-    there was some problem.
+    :return:
+        Modified dictionary of defines or raises ``PreprocessorError`` if
+        an error occurred.
     """
-    if __preprocessedFiles is None:
-        __preprocessedFiles = []
+    if _preprocessed_files is None:
+        _preprocessed_files = []
     log.info("preprocess(infile=%r, outfile=%r, defines=%r, force=%r, "\
              "keepLines=%r, includePath=%r, contentType=%r, "\
-             "__preprocessedFiles=%r)", infile, outfile, defines, force,
-             keepLines, includePath, contentType, __preprocessedFiles)
+             "__preprocessedFiles=%r)", infile, outfile, defines,
+             should_force_overwrite,
+             should_keep_lines, include_paths, content_type,
+             _preprocessed_files)
     absInfile = os.path.normpath(os.path.abspath(infile))
-    if absInfile in __preprocessedFiles:
+    if absInfile in _preprocessed_files:
         raise PreprocessorError("detected recursive #include of '%s'"\
-                              % infile)
-    __preprocessedFiles.append(os.path.abspath(infile))
+                                % infile)
+    _preprocessed_files.append(os.path.abspath(infile))
 
     # Determine the content type and comment info for the input file.
-    if contentType is None:
-        registry = contentTypesRegistry or getDefaultContentTypesRegistry()
-        contentType = registry.get_content_type(infile)
-        if contentType is None:
-            contentType = "Text"
+    if content_type is None:
+        registry = content_types_registry or getDefaultContentTypesRegistry()
+        content_type = registry.get_content_type(infile)
+        if content_type is None:
+            content_type = "Text"
             log.warn("defaulting content type for '%s' to '%s'",
-                     infile, contentType)
+                     infile, content_type)
     try:
-        cgs = _commentGroups[contentType]
+        cgs = _commentGroups[content_type]
     except KeyError:
         raise PreprocessorError("don't know comment delimiters for content "\
-                              "type '%s' (file '%s')"\
-                              % (contentType, infile))
+                                "type '%s' (file '%s')"\
+                                % (content_type, infile))
 
     # Generate statement parsing regexes. Basic format:
     #       <comment-prefix> <preprocessor-stmt> <comment-suffix>
@@ -358,7 +379,7 @@ def preprocess(infile, outfile=sys.stdout, defines={},
     lines = fin.readlines()
     fin.close()
     if type(outfile) in types.StringTypes:
-        if force and os.path.exists(outfile):
+        if should_force_overwrite and os.path.exists(outfile):
             os.chmod(outfile, 0777)
             os.remove(outfile)
         fout = open(outfile, 'w')
@@ -417,19 +438,22 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                         # This is the first include form: #include "path"
                         f = match.group("fname")
 
-                    for d in [os.path.dirname(infile)] + includePath:
+                    for d in [os.path.dirname(infile)] + include_paths:
                         fname = os.path.normpath(os.path.join(d, f))
                         if os.path.exists(fname):
                             break
                     else:
-                        raise PreprocessorError("could not find #include'd file "\
-                                              "\"%s\" on include path: %r"\
-                                              % (f, includePath))
-                    defines = preprocess(fname, fout, defines, force,
-                                         keepLines, includePath, substitute,
-                                         contentTypesRegistry=contentTypesRegistry
+                        raise PreprocessorError(
+                            "could not find #include'd file "\
+                            "\"%s\" on include path: %r"\
+                            % (f, include_paths))
+                    defines = preprocess(fname, fout, defines,
+                                         should_force_overwrite,
+                                         should_keep_lines, include_paths,
+                                         should_substitute,
+                                         content_types_registry=content_types_registry
                                          ,
-                                         __preprocessedFiles=__preprocessedFiles)
+                                         _preprocessed_files=_preprocessed_files)
             elif op in ("if", "ifdef", "ifndef"):
                 if op == "if":
                     expr = match.group("expr")
@@ -447,16 +471,17 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                         states.append((SKIP, 0, 0))
                 except KeyError:
                     raise PreprocessorError("use of undefined variable in "\
-                                          "#%s stmt" % op, defines['__FILE__'],
-                                          defines['__LINE__'], line)
+                                            "#%s stmt" % op, defines['__FILE__']
+                                            ,
+                                            defines['__LINE__'], line)
             elif op == "elif":
                 expr = match.group("expr")
                 try:
                     if states[-1][2]: # already had #else in this if-block
                         raise PreprocessorError("illegal #elif after #else in "\
-                                              "same #if block",
-                                              defines['__FILE__'],
-                                              defines['__LINE__'], line)
+                                                "same #if block",
+                                                defines['__FILE__'],
+                                                defines['__LINE__'], line)
                     elif states[-1][1]: # if have emitted in this if-block
                         states[-1] = (SKIP, 1, 0)
                     elif states[:-1] and states[-2][0] == SKIP:
@@ -468,15 +493,15 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                         states[-1] = (SKIP, 0, 0)
                 except IndexError:
                     raise PreprocessorError("#elif stmt without leading #if "\
-                                          "stmt", defines['__FILE__'],
-                                          defines['__LINE__'], line)
+                                            "stmt", defines['__FILE__'],
+                                            defines['__LINE__'], line)
             elif op == "else":
                 try:
                     if states[-1][2]: # already had #else in this if-block
                         raise PreprocessorError("illegal #else after #else in "\
-                                              "same #if block",
-                                              defines['__FILE__'],
-                                              defines['__LINE__'], line)
+                                                "same #if block",
+                                                defines['__FILE__'],
+                                                defines['__LINE__'], line)
                     elif states[-1][1]: # if have emitted in this if-block
                         states[-1] = (SKIP, 1, 1)
                     elif states[:-1] and states[-2][0] == SKIP:
@@ -486,23 +511,23 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                         states[-1] = (EMIT, 1, 1)
                 except IndexError:
                     raise PreprocessorError("#else stmt without leading #if "\
-                                          "stmt", defines['__FILE__'],
-                                          defines['__LINE__'], line)
+                                            "stmt", defines['__FILE__'],
+                                            defines['__LINE__'], line)
             elif op == "endif":
                 try:
                     states.pop()
                 except IndexError:
                     raise PreprocessorError("#endif stmt without leading #if"\
-                                          "stmt", defines['__FILE__'],
-                                          defines['__LINE__'], line)
+                                            "stmt", defines['__FILE__'],
+                                            defines['__LINE__'], line)
             elif op == "error":
                 if not (states and states[-1][0] == SKIP):
                     error = match.group("error")
                     raise PreprocessorError("#error: " + error,
-                                          defines['__FILE__'],
-                                          defines['__LINE__'], line)
+                                            defines['__FILE__'],
+                                            defines['__LINE__'], line)
             log.debug("states: %r", states)
-            if keepLines:
+            if should_keep_lines:
                 fout.write("\n")
         else:
             try:
@@ -512,26 +537,26 @@ def preprocess(infile, outfile=sys.stdout, defines={},
                     # XXX Should avoid recursive substitutions. But that
                     #     would be a pain right now.
                     sline = line
-                    if substitute:
+                    if should_substitute:
                         for name in reversed(sorted(defines, key=len)):
                             value = defines[name]
                             sline = sline.replace(name, str(value))
                     fout.write(sline)
-                elif keepLines:
+                elif should_keep_lines:
                     log.debug("keep blank line (%s)" % states[-1][1])
                     fout.write("\n")
                 else:
                     log.debug("skip line (%s)" % states[-1][1])
             except IndexError:
                 raise PreprocessorError("superfluous #endif before this line",
-                                      defines['__FILE__'],
-                                      defines['__LINE__'])
+                                        defines['__FILE__'],
+                                        defines['__LINE__'])
     if len(states) > 1:
         raise PreprocessorError("unterminated #if block", defines['__FILE__'],
-                              defines['__LINE__'])
+                                defines['__LINE__'])
     elif len(states) < 1:
         raise PreprocessorError("superfluous #endif on or before this line",
-                              defines['__FILE__'], defines['__LINE__'])
+                                defines['__FILE__'], defines['__LINE__'])
 
     if fout != outfile:
         fout.close()
@@ -657,7 +682,7 @@ class ContentTypesRegistry:
             if not patterns:
                 if line[-1] == '\n': line = line[:-1]
                 raise PreprocessorError("bogus content.types line, there must "\
-                                      "be one or more patterns: '%s'" % line)
+                                        "be one or more patterns: '%s'" % line)
             for pattern in patterns:
                 if pattern.startswith('.'):
                     if sys.platform.startswith("win"):
@@ -718,7 +743,6 @@ def getDefaultContentTypesRegistry():
     return _gDefaultContentTypesRegistry
 
 
-
 def parse_command_line():
     """\
     Parses the command line and returns a ``Namespace`` object
@@ -750,7 +774,8 @@ def parse_command_line():
                         '--log-level',
                         '--logging-level',
                         dest='logging_level',
-                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR',
+                                 'CRITICAL'],
                         default='INFO',
                         help="Logging level.")
     parser.add_argument('-o',
@@ -908,7 +933,8 @@ def parse_definitions(definitions):
                 define, value = definition.split('=', 1)
                 try:
                     # Caveat: Float values like 2e-23 will not be parsed.
-                    value = float(value) if '.' in value else parse_int_token(value)
+                    value = float(value) if '.' in value else parse_int_token(
+                        value)
                 except ValueError:
                     value = parse_bool_token(value)
             except ValueError:
@@ -940,7 +966,7 @@ def main():
                    args.should_keep_lines,
                    args.include_paths,
                    args.should_substitute,
-                   contentTypesRegistry=content_types_registry)
+                   content_types_registry=content_types_registry)
     except PreprocessorError, ex:
         if log.isDebugEnabled():
             import traceback
