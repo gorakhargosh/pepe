@@ -775,6 +775,11 @@ def parse_command_line():
                         action='store_true',
                         default=False,
                         help="Enables verbose logging")
+    parser.add_argument('-l',
+                        '--log-level',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        default='INFO',
+                        help="Logging level.")
     parser.add_argument('-o',
                         '--output',
                         dest='output_file',
@@ -920,17 +925,18 @@ def parse_definitions(definitions):
         {'FOOBAR': 'ah=3'}
     """
     defines = {}
-    for definition in definitions:
-        try:
-            define, value = definition.split('=', 1)
+    if definitions:
+        for definition in definitions:
             try:
-                # Caveat: Float values like 2e-23 will not be parsed.
-                value = float(value) if '.' in value else parse_int_token(value)
+                define, value = definition.split('=', 1)
+                try:
+                    # Caveat: Float values like 2e-23 will not be parsed.
+                    value = float(value) if '.' in value else parse_int_token(value)
+                except ValueError:
+                    value = parse_bool_token(value)
             except ValueError:
-                value = parse_bool_token(value)
-        except ValueError:
-            define, value = definition, None
-        defines[define] = value
+                define, value = definition, None
+            defines[define] = value
     return defines
 
 
