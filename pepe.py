@@ -895,7 +895,7 @@ def parse_definitions(definitions):
         ['FOOBAR=0x40', 'DEBUG=false']   ->    {'DEBUG': False, 'FOOBAR': 64}
         ['FOOBAR=whatever']              ->    {'FOOBAR': 'whatever'}
         ['FOOBAR']                       ->    {'FOOBAR': None}
-
+        ['FOOBAR=ah=3']                  ->    {'FOOBAR': 'ah=3'}
     :return:
         ``dict`` as symbol table.
     """
