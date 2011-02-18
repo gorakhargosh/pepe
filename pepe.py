@@ -836,17 +836,24 @@ def parse_int_token(string):
     """\
     Parses a string to convert it to an integer based on the format used:
 
-    * "0x40" will be converted to 64 (hexadecimal)
-    * "040" will be converted to 32 (octal)
-    * "40" will be converted to 40 (decimal)
-    * Anything else is left unprocessed and a ``ValueError`` will be raised.
-
     :param string:
         The string to convert to an integer.
     :type string:
         ``str``
     :return:
         ``int`` or raises ``ValueError`` exception.
+
+    Usage:
+    >>> parse_int_token("0x40")
+    64
+    >>> parse_int_token("040")
+    32
+    >>> parse_int_token("40")
+    40
+    >>> parse_int_token("foobar")
+    Traceback (most recent call last):
+        ...
+    ValueError: invalid literal for int() with base 10: 'foobar'
     """
     if string.startswith("0x") or string.startswith("0X"):
         return int(string, 16)
@@ -856,25 +863,30 @@ def parse_int_token(string):
         return int(string)
 
 
-def parse_bool_token(string):
+def parse_bool_token(token):
     """\
-    Parses a string to convert it to its equivalent boolean value or
-    leaves the string intact if it cannot.
+    Parses a string token to convert it to its equivalent boolean value ignoring
+    the case of the string token or leaves the token intact if it cannot.
 
     :param string:
         String to convert to ``True`` or ``False``.
     :type string:
         ``str``
     :return:
-        ``True`` or ``False`` or the string itself if not converted.
+        ``True`` or ``False`` or the token itself if not converted.
+
+    Usage:
+    >>> parse_bool_token('FAlse')
+    False
+    >>> parse_bool_token('FalS')
+    'FalS'
+    >>> parse_bool_token('true')
+    True
+    >>> parse_bool_token('TRUE')
+    True
     """
-    string = string.lower()
-    if string == "true":
-        return True
-    elif string == "false":
-        return False
-    else:
-        return string
+    return {'true': True, 'false': False}.get(token.lower(), token)
+
 
 
 def parse_definitions(definitions):
