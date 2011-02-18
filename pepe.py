@@ -748,7 +748,6 @@ except NameError:
             yield item
 
 
-
 def parse_command_line():
     """\
     Parses the command line and returns a ``Namespace`` object
@@ -890,7 +889,6 @@ def parse_bool_token(token):
     return {'true': True, 'false': False}.get(token.lower(), token)
 
 
-
 def parse_definitions(definitions):
     """\
     Parses a list of macro definitions and returns a "symbol table"
@@ -947,7 +945,8 @@ def main():
     infile = args.input_file
 
     try:
-        contentTypesRegistry = ContentTypesRegistry(args.content_types_config_files)
+        contentTypesRegistry = ContentTypesRegistry(
+            args.content_types_config_files)
         preprocess(infile,
                    outfile,
                    defines,
