@@ -873,6 +873,7 @@ def main():
         try:
             define, value = definition.split('=', 1)
             try:
+                # Caveat: Float values like 2e-23 will not be parsed.
                 value = float(value) if '.' in value else parse_int(value)
             except ValueError:
                 value = parse_bool(value)
