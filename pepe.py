@@ -36,7 +36,7 @@
                         currently will substitute into program strings.
         -c, --content-types-path <path>
                         Specify a path to a content.types file to assist
-                        with filetype determination. See the
+                        with file type determination. See the
                         `_gDefaultContentTypes` string in this file for
                         details on its format.
 
@@ -592,9 +592,9 @@ _gDefaultContentTypes = """
     # Format is an extension of 'mime.types' file syntax.
     #   - '#' indicates a comment to the end of the line.
     #   - a line is:
-    #       <filetype> [<pattern>...]
+    #       <file type> [<pattern>...]
     #     where,
-    #       <filetype>'s are equivalent in spirit to the names used in the Windows
+    #       <file type>'s are equivalent in spirit to the names used in the Windows
     #           registry in HKCR, but some of those names suck or are inconsistent;
     #           and
     #       <pattern> is a suffix (pattern starts with a '.'), a regular expression
@@ -656,7 +656,7 @@ _gDefaultContentTypes = """
 """
 
 class ContentTypesRegistry:
-    """A class that handles determining the filetype of a given path.
+    """A class that handles determining the file type of a given path.
 
     Usage:
         >>> registry = ContentTypesRegistry()
