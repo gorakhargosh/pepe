@@ -1,10 +1,5 @@
 pepe -- a portable multi-language file preprocessor
-============================================================
-
-    $ pip install pepe
-
-Why pepe.py?
-------------------
+===================================================
 
 There are millions of templating systems out there (most of them
 developed for the web). This isn't one of those, though it does share
@@ -78,162 +73,17 @@ in program strings, which is not ideal. When a future version of
 pepe can lex languages being preprocessed it will NOT substitute
 into program strings and substitution will be turned ON by default.
 
-Please send any feedback to [Trent Mick](mailto:trentm@google's mail
-thing.com).
-
-
 Install Notes
 -------------
 
-Download the latest `pepe` source package, unzip it, and run `python
-setup.py install`:
-
-    unzip pepe-1.1.0.zip
-    cd pepe-1.1.0
-    python setup.py install
-
-If your install fails then please visit [the Troubleshooting
-FAQ](http://trentm.com/faq.html#troubleshooting-python-package-installation).
-
-This will install `pepe.py` into your Python `site-packages` and
-also into your Python bin directory. If you can now run `pepe`
-and get a response then you are good to go, otherwise read on.
-
-The *problem* is that the Python bin directory is not always on your
-PATH on some operating systems -- notably Mac OS X. To finish the
-install on OS X either manually move 'pepe' to somewhere on your
-PATH:
-
-    cp pepe.py /usr/local/bin/pepe
-
-or create a symlink to it (try one of these depending on your Python
-version):
-
-    ln -s /System/Library/Frameworks/Python.framework/Versions/2.3/bin/pepe /usr/local/bin/pepe
-    ln -s /Library/Frameworks/Python.framework/Versions/2.4/bin/pepe /usr/local/bin/pepe
-
-(Note: You'll probably need to prefix those commands with `sudo` and
-the exact paths may differ on your system.)
-
+    $ pip install pepe
 
 Getting Started
 ---------------
 
-Once you have it install, run `pepe --help` for full usage
-information:
+Using as a shell command:
 
     $ pepe --help
-    Preprocess a file.
-
-    Command Line Usage:
-        pepe [<options>...] <infile>
-
-    Options:
-        -h, --help      Print this help and exit.
-        -V, --version   Print the version info and exit.
-        -v, --verbose   Give verbose output for errors.
-
-        -o <outfile>    Write output to the given file instead of to stdout.
-        -f, --force     Overwrite given output file. (Otherwise an IOError
-                        will be raised if <outfile> already exists.
-        -D <define>     Define a variable for preprocessing. <define>
-                        can simply be a variable name (in which case it
-                        will be true) or it can be of the form
-                        <var>=<val>. An attempt will be made to convert
-                        <val> to an integer so "-D FOO=0" will create a
-                        false value.
-        -I <dir>        Add an directory to the include path for
-                        #include directives.
-
-        -k, --keep-lines    Emit empty lines for preprocessor statement
-                        lines and skipped output lines. This allows line
-                        numbers to stay constant.
-        -s, --substitute    Substitute defines into emitted lines. By
-                        default substitution is NOT done because it
-                        currently will substitute into program strings.
-
-    Module Usage:
-        from pepe import preprocess
-        preprocess(infile, outfile=sys.stdout, defines={}, force=0,
-                   keepLines=0, includePath=[], substitute=0)
-
-    The <infile> can be marked up with special preprocessor statement lines
-    of the form:
-        <comment-prefix> <preprocessor-statement> <comment-suffix>
-    where the <comment-prefix/suffix> are the native comment delimiters for
-    that file type. 
-
-
-    Examples
-    --------
-
-    HTML (*.htm, *.html) or XML (*.xml, *.kpf, *.xul) files:
-
-        <!-- #if FOO -->
-        ...
-        <!-- #endif -->
-
-    Python (*.py), Perl (*.pl), Tcl (*.tcl), Ruby (*.rb), Bash (*.sh),
-    or make ([Mm]akefile*) files:
-
-        # #if defined('FAV_COLOR') and FAV_COLOR == "blue"
-        ...
-        # #elif FAV_COLOR == "red"
-        ...
-        # #else
-        ...
-        # #endif
-
-    C (*.c, *.h), C++ (*.cpp, *.cxx, *.cc, *.h, *.hpp, *.hxx, *.hh),
-    Java (*.java), PHP (*.php) or C# (*.cs) files:
-
-        // #define FAV_COLOR 'blue'
-        ...
-        /* #ifndef FAV_COLOR */
-        ...
-        // #endif
-
-    Fortran 77 (*.f) or 90/95 (*.f90) files:
-
-        C     #if COEFF == 'var'
-              ...
-        C     #endif
-
-
-    Preprocessor Syntax
-    -------------------
-
-    - Valid statements:
-        #define <var> [<value>]
-        #undef <var>
-        #ifdef <var>
-        #ifndef <var>
-        #if <expr>
-        #elif <expr>
-        #else
-        #endif
-        #error <error string>
-        #include "<file>"
-      where <expr> is any valid Python expression.
-    - The expression after #if/elif may be a Python statement. It is an
-      error to refer to a variable that has not been defined by a -D
-      option or by an in-content #define.
-    - Special built-in methods for expressions:
-        defined(varName)    Return true if given variable is defined.  
-
-
-    Tips
-    ----
-
-    A suggested file naming convention is to let input files to
-    pepe be of the form <basename>.p.<ext> and direct the output
-    of pepe to <basename>.<ext>, e.g.:
-        pepe -o foo.py foo.p.py
-    The advantage is that other tools (esp. editors) will still
-    recognize the unpreprocessed file as the original language.
-
-
-And, for module usage, read the pepe.preprocess() docstring:
-
-    pydoc pepe.preprocess
-
+    
+Pepe can also be used as a module. Please see the documentation
+for more information.
