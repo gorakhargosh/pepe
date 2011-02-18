@@ -1,0 +1,4 @@
+include *.in Makefile*  *.txt MANIFEST
+recursive-include test/inputs *
+recursive-include test/outputs *
+exclude *~
