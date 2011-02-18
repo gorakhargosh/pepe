@@ -1,5 +1,5 @@
-pepe -- a portable multi-language file preprocessor
-===================================================
+pepe—a portable multi-language file preprocessor
+================================================
 
 There are tons of template systems. This is just a basic preprocessor.
 
