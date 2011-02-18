@@ -834,13 +834,13 @@ details on its format.""")
     return parser.parse_args()
 
 
-def parse_int_token(string):
+def parse_int_token(token):
     """\
     Parses a string to convert it to an integer based on the format used:
 
-    :param string:
+    :param token:
         The string to convert to an integer.
-    :type string:
+    :type token:
         ``str``
     :return:
         ``int`` or raises ``ValueError`` exception.
@@ -858,12 +858,12 @@ def parse_int_token(string):
             ...
         ValueError: invalid literal for int() with base 10: 'foobar'
     """
-    if string.startswith("0x") or string.startswith("0X"):
-        return int(string, 16)
-    elif string.startswith("0"):
-        return int(string, 8)
+    if token.startswith("0x") or token.startswith("0X"):
+        return int(token, 16)
+    elif token.startswith("0"):
+        return int(token, 8)
     else:
-        return int(string)
+        return int(token)
 
 
 def parse_bool_token(token):
@@ -871,9 +871,9 @@ def parse_bool_token(token):
     Parses a string token to convert it to its equivalent boolean value ignoring
     the case of the string token or leaves the token intact if it cannot.
 
-    :param string:
+    :param token:
         String to convert to ``True`` or ``False``.
-    :type string:
+    :type token:
         ``str``
     :return:
         ``True`` or ``False`` or the token itself if not converted.
