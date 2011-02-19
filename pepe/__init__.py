@@ -116,7 +116,7 @@ class PreprocessorError(Exception):
         Exception.__init__(self, error_message, filename, line_number, line)
 
     def __str__(self):
-        """\
+        """
 
         Usage:
 
@@ -171,7 +171,7 @@ def preprocess(infile,
                content_type=None,
                content_types_registry=None,
                _preprocessed_files=None):
-    """\
+    """
     Preprocesses the specified file.
 
     :param infile:
@@ -576,7 +576,7 @@ def getDefaultContentTypesRegistry():
 
 
 def parse_int_token(token):
-    """\
+    """
     Parses a string to convert it to an integer based on the format used:
 
     :param token:
@@ -608,7 +608,7 @@ def parse_int_token(token):
 
 
 def parse_bool_token(token):
-    """\
+    """
     Parses a string token to convert it to its equivalent boolean value ignoring
     the case of the string token or leaves the token intact if it cannot.
 
@@ -634,7 +634,7 @@ def parse_bool_token(token):
 
 
 def parse_number_token(token):
-    """\
+    """
     Parses a number token to convert it to a float or int.
     Caveat: Float values like 2e-23 will not be parsed as numbers.
 
@@ -669,7 +669,7 @@ def parse_number_token(token):
 
 
 def parse_definition_expr(expr, default_value=None):
-    """\
+    """
     Parses a definition expression and returns a key-value pair
     as a tuple.
 
@@ -739,7 +739,7 @@ def parse_definition_expr(expr, default_value=None):
 
 
 def parse_definitions(definitions):
-    """\
+    """
     Parses a list of macro definitions and returns a "symbol table"
     as a dictionary.
 
@@ -780,7 +780,7 @@ def parse_definitions(definitions):
 
 
 def parse_command_line():
-    """\
+    """
     Parses the command line and returns a ``Namespace`` object
     containing options and their values.
 
@@ -941,7 +941,7 @@ def set_up_logging(logger, level, should_be_quiet):
 
 
 def main():
-    """\
+    """
     Entry-point function.
     """
     args = parse_command_line()
