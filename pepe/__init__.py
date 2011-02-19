@@ -733,9 +733,14 @@ Substitute #defines into emitted lines.
                         action='append',
                         help="""\
 Specify a path to a content.types file to assist
-with file type determination. See the
-`_gDefaultContentTypes` string in this file for
-details on its format.""")
+with file type determination. Use the -P flag to
+display content types as read by pepe.""")
+    parser.add_argument('-P',
+                        '--print-content-types',
+                        dest='should_print_content_types',
+                        action='store_true',
+                        default=False,
+                        help='Display content types and exit.')
     return parser.parse_args()
 
 
