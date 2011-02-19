@@ -834,7 +834,7 @@ def parse_command_line():
                         help='Force overwrite existing output file.')
     parser.add_argument('-D',
                         '--define',
-                        metavar="DEFINITION",
+                        metavar="EXPR",
                         dest='definitions',
                         action='append',
                         help="""\
@@ -846,6 +846,7 @@ will be true) or it can be of the form
 false value.""")
     parser.add_argument('-I',
                         '--include',
+                        metavar="DIR_PATH",
                         dest='include_paths',
                         action='append',
                         default=['.'],
@@ -870,6 +871,7 @@ Substitute #defines into emitted lines.
     parser.add_argument('-c',
                         '--content-types-path',
                         '--content-types-config',
+                        metavar="PATH",
                         dest='content_types_config_files',
                         action='append',
                         help="""\
