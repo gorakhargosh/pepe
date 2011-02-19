@@ -994,7 +994,8 @@ def parse_definitions(definitions):
             * <variable>=<value>
             * <variable>
     :return:
-        ``dict`` as symbol table.
+        ``dict`` as symbol table or raises an exception thrown by
+        :func:``parse_definition_expr``.
 
     Usage::
 
