@@ -811,7 +811,7 @@ def parse_bool_token(token):
 def parse_number_token(token):
     """\
     Parses a number token to convert it to a float or int.
-    Caveat: Float values like 2e-23 will not be parsed.
+    Caveat: Float values like 2e-23 will not be parsed as numbers.
 
     :param token:
         String token to be converted.
@@ -820,6 +820,25 @@ def parse_number_token(token):
     :return:
         ``float`` or ``int`` or raises a ``ValueError`` if a parse error
         occurred.
+
+    Usage::
+
+        >>> parse_number_token("0x40")
+        64
+        >>> parse_number_token("040")
+        32
+        >>> parse_number_token("40")
+        40
+        >>> parse_number_token("4.0")
+        4.0
+        >>> parse_number_token("2e-23")
+        Traceback (most recent call last):
+            ...
+        ValueError: invalid literal for int() with base 10: '2e-23'
+        >>> parse_number_token("foobar")
+        Traceback (most recent call last):
+            ...
+        ValueError: invalid literal for int() with base 10: 'foobar'
     """
     return float(token) if '.' in token else parse_int_token(token)
 
