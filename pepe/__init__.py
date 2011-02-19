@@ -897,14 +897,16 @@ class NullLoggingHandler(logging.Handler):
         pass
 
 
-def set_up_logging(logger, args):
+def set_up_logging(logger, level, should_be_quiet):
     """
     Sets up logging for pepe.
 
     :param logger:
         The logger object to update.
-    :param args:
-        Arguments namespace provided by ``argparse``.
+    :param level:
+        Logging level specified at command line.
+    :param should_be_quiet:
+        Boolean value for the -q option.
     :return:
         logging level ``int`` or None
     """
@@ -917,8 +919,8 @@ def set_up_logging(logger, args):
         'NONE': None,
     }
 
-    logging_level = LOGGING_LEVELS.get(args.logging_level)
-    if args.should_be_quiet or logging_level is None:
+    logging_level = LOGGING_LEVELS.get(level)
+    if should_be_quiet or logging_level is None:
         logging_handler = NullLoggingHandler()
     else:
         logger.setLevel(logging_level)
@@ -933,13 +935,14 @@ def set_up_logging(logger, args):
     logger.addHandler(logging_handler)
     return logging_level
 
+
 def main():
     """\
     Entry-point function.
     """
     args = parse_command_line()
 
-    logging_level = set_up_logging(logger, args)
+    logging_level = set_up_logging(logger, args.logging_level, args.should_be_quiet)
     defines = parse_definitions(args.definitions)
 
     try:
