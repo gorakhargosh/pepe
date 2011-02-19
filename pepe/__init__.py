@@ -711,6 +711,10 @@ def parse_definition_expr(expr, default_value=None):
         ('FOOBAR', 'ah=3')
         >>> parse_definition_expr(' FOOBAR=ah=3 ')
         ('FOOBAR', 'ah=3 ')
+        >>> parse_definition_expr(' FOOBAR =ah=3 ')
+        ('FOOBAR', 'ah=3 ')
+        >>> parse_definition_expr(' FOOBAR = ah=3 ')
+        ('FOOBAR', ' ah=3 ')
         >>> parse_definition_expr(" ")
         Traceback (most recent call last):
             ...
