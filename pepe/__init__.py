@@ -733,14 +733,20 @@ Substitute #defines into emitted lines.
                         action='append',
                         help="""\
 Specify a path to a content.types file to assist
-with file type determination. Use the -P flag to
-display content types as read by pepe.""")
-    parser.add_argument('-P',
+with file type determination. Use the -p or -P flags
+to display content types as read by pepe.""")
+    parser.add_argument('-p',
                         '--print-content-types',
                         dest='should_print_content_types',
                         action='store_true',
                         default=False,
                         help='Display content types and exit.')
+    parser.add_argument('-P',
+                        '--print-content-types-config',
+                        dest='should_print_content_types_config',
+                        action='store_true',
+                        default=False,
+                        help='Display content types configuration and exit.')
     return parser.parse_args()
 
 
