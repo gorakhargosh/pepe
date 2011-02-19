@@ -94,16 +94,28 @@ import re
 from pkg_resources import resource_filename
 try:
     from pepe.data import COMMENT_GROUPS
+    from pepe.content_types import ContentTypesDatabase
 
 # TODO: Remove this later.
 except ImportError:
     from data import COMMENT_GROUPS
+    from content_types import ContentTypesDatabase
 
 
 DEFAULT_CONTENT_TYPES = open(
     resource_filename(__name__, "content.types")).read()
 
 logger = logging.getLogger("pepe")
+
+
+_gDefaultContentTypesRegistry = None
+
+def getDefaultContentTypesRegistry():
+    global _gDefaultContentTypesRegistry
+    if _gDefaultContentTypesRegistry is None:
+        _gDefaultContentTypesRegistry = ContentTypesDatabase()
+    return _gDefaultContentTypesRegistry
+
 
 
 class PreprocessorError(Exception):
@@ -132,34 +144,35 @@ class PreprocessorError(Exception):
         return s
 
 
-def _evaluate(expr, defines):
+def _evaluate(expression, defines):
     """Evaluate the given expression string with the given context.
 
-    WARNING: This runs eval() on a user string. This is unsafe.
+    .. WARNING:
+        This runs eval() on a user string. This is unsafe.
     """
     #interpolated = _interpolate(s, defines)
     try:
-        rv = eval(expr, {'defined': lambda v: v in defines}, defines)
+        defined = {'defined': (lambda v: v in defines)}
+        return_value = eval(expression, defined, defines)
     except Exception, ex:
-        msg = str(ex)
-        if msg.startswith("name '") and msg.endswith("' is not defined"):
+        message = str(ex)
+        if message.startswith("name '") and message.endswith("' is not defined"):
             # A common error (at least this is presumed:) is to have
             #   defined(FOO)   instead of   defined('FOO')
-            # We should give a little as to what might be wrong.
-            # msg == "name 'FOO' is not defined"  -->  varName == "FOO"
-            varName = msg[len("name '"):-len("' is not defined")]
-            if expr.find("defined(%s)" % varName) != -1:
+            # We should give a little insight into what might be wrong.
+            # message == "name 'FOO' is not defined"
+            #    -->  variable_name == "FOO"
+            variable_name = message[len("name '"):-len("' is not defined")]
+            if expression.find("defined(%s)" % variable_name) > -1:
                 # "defined(FOO)" in expr instead of "defined('FOO')"
-                msg += " (perhaps you want \"defined('%s')\" instead of "\
-                       "\"defined(%s)\")" % (varName, varName)
-        elif msg.startswith("invalid syntax"):
-            msg = "invalid syntax: '%s'" % expr
-        raise PreprocessorError(msg, defines['__FILE__'], defines['__LINE__'])
-    logger.debug("evaluate %r -> %s (defines=%r)", expr, rv, defines)
-    return rv
+                message += ''' (perhaps you want `defined('%s')` instead of `defined(%s)`)''' % (variable_name, variable_name)
+        elif message.startswith("invalid syntax"):
+            message = "invalid syntax: `%s`" % expression
+        raise PreprocessorError(message, defines['__FILE__'], defines['__LINE__'])
 
+    logger.debug("evaluate %r -> %s (defines=%r)", expression, return_value, defines)
+    return return_value
 
-#---- module API
 
 def preprocess(infile,
                outfile=sys.stdout,
@@ -465,114 +478,6 @@ def preprocess(infile,
         fout.close()
 
     return defines
-
-
-class ContentTypesRegistry:
-    """A class that handles determining the file type of a given path.
-
-    Usage:
-        >>> registry = ContentTypesRegistry()
-        >>> assert registry.get_content_type("__init__.py") == "Python"
-    """
-
-    def __init__(self, content_types_config_files=None):
-        self.content_types_config_files = content_types_config_files or []
-        self._load()
-
-    def _load(self):
-        from os.path import dirname, join, exists
-
-        self.suffixMap = {}
-        self.regexMap = {}
-        self.filenameMap = {}
-
-        self._loadContentType(DEFAULT_CONTENT_TYPES)
-        localContentTypesPath = join(dirname(__file__), "content.types")
-        if exists(localContentTypesPath):
-            logger.debug("load content types file: `%r'" % localContentTypesPath)
-            self._loadContentType(open(localContentTypesPath, 'r').read())
-        for path in self.content_types_config_files:
-            logger.debug("load content types file: `%r'" % path)
-            self._loadContentType(open(path, 'r').read())
-
-    def _loadContentType(self, content, path=None):
-        """Return the registry for the given content.types file.
-
-        The registry is three mappings:
-            <suffix> -> <content type>
-            <regex> -> <content type>
-            <filename> -> <content type>
-        """
-        for line in content.splitlines(0):
-            words = line.strip().split()
-            for i in range(len(words)):
-                if words[i][0] == '#':
-                    del words[i:]
-                    break
-            if not words: continue
-            contentType, patterns = words[0], words[1:]
-            if not patterns:
-                if line[-1] == '\n': line = line[:-1]
-                raise PreprocessorError("bogus content.types line, there must "\
-                                        "be one or more patterns: '%s'" % line)
-            for pattern in patterns:
-                if pattern.startswith('.'):
-                    if sys.platform.startswith("win"):
-                        # Suffix patterns are case-insensitive on Windows.
-                        pattern = pattern.lower()
-                    self.suffixMap[pattern] = contentType
-                elif pattern.startswith('/') and pattern.endswith('/'):
-                    self.regexMap[re.compile(pattern[1:-1])] = contentType
-                else:
-                    self.filenameMap[pattern] = contentType
-
-    def get_content_type(self, path):
-        """Return a content type for the given path.
-
-        @param path {str} The path of file for which to guess the
-            content type.
-        @returns {str|None} Returns None if could not determine the
-            content type.
-        """
-        basename = os.path.basename(path)
-        contentType = None
-        # Try to determine from the path.
-        if not contentType and self.filenameMap.has_key(basename):
-            contentType = self.filenameMap[basename]
-            logger.debug("Content type of '%s' is '%s' (determined from full "\
-                      "path).", path, contentType)
-            # Try to determine from the suffix.
-        if not contentType and '.' in basename:
-            suffix = "." + basename.split(".")[-1]
-            if sys.platform.startswith("win"):
-                # Suffix patterns are case-insensitive on Windows.
-                suffix = suffix.lower()
-            if self.suffixMap.has_key(suffix):
-                contentType = self.suffixMap[suffix]
-                logger.debug("Content type of '%s' is '%s' (determined from "\
-                          "suffix '%s').", path, contentType, suffix)
-                # Try to determine from the registered set of regex patterns.
-        if not contentType:
-            for regex, ctype in self.regexMap.items():
-                if regex.search(basename):
-                    contentType = ctype
-                    logger.debug(
-                        "Content type of '%s' is '%s' (matches regex '%s')",
-                        path, contentType, regex.pattern)
-                    break
-                    # Try to determine from the file contents.
-        content = open(path, 'rb').read()
-        if content.startswith("<?xml"):  # cheap XML sniffing
-            contentType = "XML"
-        return contentType
-
-_gDefaultContentTypesRegistry = None
-
-def getDefaultContentTypesRegistry():
-    global _gDefaultContentTypesRegistry
-    if _gDefaultContentTypesRegistry is None:
-        _gDefaultContentTypesRegistry = ContentTypesRegistry()
-    return _gDefaultContentTypesRegistry
 
 
 def parse_int_token(token):
@@ -954,7 +859,7 @@ def main():
     defines = parse_definitions(args.definitions)
 
     try:
-        content_types_registry = ContentTypesRegistry(
+        content_types_registry = ContentTypesDatabase(
             args.content_types_config_files)
         preprocess(args.input_file,
                    args.output_file,
