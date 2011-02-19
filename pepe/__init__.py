@@ -815,7 +815,8 @@ def parse_command_line():
                             'INFO',
                             'WARNING',
                             'ERROR',
-                            'CRITICAL'
+                            'CRITICAL',
+                            'NONE',
                             ],
                         default='INFO',
                         help="Logging level.")
