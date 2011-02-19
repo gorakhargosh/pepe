@@ -797,7 +797,7 @@ def parse_command_line():
                         version='%(prog)s ' + __version__,
                         help="Show version number and exit.")
     parser.add_argument('input_file',
-                        metavar='INFILE',
+                        metavar='INPUT_FILE',
                         type=str,
                         help='Path of the input file to be preprocessed')
     parser.add_argument('-q',
@@ -822,6 +822,7 @@ def parse_command_line():
                         help="Logging level.")
     parser.add_argument('-o',
                         '--output',
+                        metavar="OUTPUT_FILE",
                         dest='output_file',
                         default=sys.stdout,
                         help='Output file name (default STDOUT)')
