@@ -867,7 +867,7 @@ numbers to stay constant.''')
                         default=False,
                         help='''\
 Substitute #defines into emitted lines.
-(Disabled by default to avoid polluting strings''')
+(Disabled by default to avoid polluting strings)''')
     parser.add_argument('-c',
                         '--content-types-path',
                         '--content-types-config',
