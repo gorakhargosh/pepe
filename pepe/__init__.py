@@ -91,6 +91,7 @@ import sys
 import types
 import re
 from pkg_resources import resource_filename
+from pepe.data import COMMENT_GROUPS
 
 DEFAULT_CONTENT_TYPES = open(resource_filename(__name__, "content.types")).read()
 
@@ -119,37 +120,6 @@ class PreprocessorError(Exception):
             s += ": "
         s += self.error_message
         return s
-
-#---- global data
-
-# Comment delimiter info.
-#   A mapping of content type to a list of 2-tuples defining the line
-#   prefix and suffix for a comment. Each prefix or suffix can either
-#   be a string (in which case it is transformed into a pattern allowing
-#   whitespace on either side) or a compiled regex.
-_commentGroups = {
-    "Python": [('#', '')],
-    "Perl": [('#', '')],
-    "PHP": [('/*', '*/'), ('//', ''), ('#', '')],
-    "Ruby": [('#', '')],
-    "Tcl": [('#', '')],
-    "Shell": [('#', '')],
-    # Allowing for CSS and JavaScript comments in XML/HTML.
-    "XML": [('<!--', '-->'), ('/*', '*/'), ('//', '')],
-    "HTML": [('<!--', '-->'), ('/*', '*/'), ('//', '')],
-    "Makefile": [('#', '')],
-    "JavaScript": [('/*', '*/'), ('//', '')],
-    "CSS": [('/*', '*/')],
-    "C": [('/*', '*/')],
-    "C++": [('/*', '*/'), ('//', '')],
-    "Java": [('/*', '*/'), ('//', '')],
-    "C#": [('/*', '*/'), ('//', '')],
-    "IDL": [('/*', '*/'), ('//', '')],
-    "Text": [('#', '')],
-    "Fortran": [(re.compile(r'^[a-zA-Z*$]\s*'), ''), ('!', '')],
-    "TeX": [('%', '')],
-}
-
 
 
 #---- internal logging facility
@@ -332,7 +302,7 @@ def preprocess(infile,
             log.warn("defaulting content type for '%s' to '%s'",
                      infile, content_type)
     try:
-        cgs = _commentGroups[content_type]
+        cgs = COMMENT_GROUPS[content_type]
     except KeyError:
         raise PreprocessorError("don't know comment delimiters for content "\
                                 "type '%s' (file '%s')"\
@@ -572,7 +542,7 @@ class ContentTypesRegistry:
 
     Usage:
         >>> registry = ContentTypesRegistry()
-        >>> assert registry.get_content_type("pepe.py") == "Python"
+        >>> assert registry.get_content_type("__init__.py") == "Python"
     """
 
     def __init__(self, content_types_config_files=None):
