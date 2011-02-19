@@ -90,6 +90,9 @@ import os
 import sys
 import types
 import re
+from pkg_resources import resource_filename
+
+DEFAULT_CONTENT_TYPES = open(resource_filename(__name__, "content.types")).read()
 
 
 class PreprocessorError(Exception):
@@ -563,77 +566,6 @@ def preprocess(infile,
 
     return defines
 
-
-#---- content-type handling
-
-DEFAULT_CONTENT_TYPES = """
-    # Default file types understood by "pepe.py".
-    #
-    # Format is an extension of 'mime.types' file syntax.
-    #   - '#' indicates a comment to the end of the line.
-    #   - a line is:
-    #       <file type> [<pattern>...]
-    #     where,
-    #       <file type>'s are equivalent in spirit to the names used in the Windows
-    #           registry in HKCR, but some of those names suck or are inconsistent;
-    #           and
-    #       <pattern> is a suffix (pattern starts with a '.'), a regular expression
-    #           (pattern is enclosed in '/' characters), a full filename (anything
-    #           else).
-    #
-    # Notes on case-sensitivity:
-    #
-    # A suffix pattern is case-insensitive on Windows and case-sensitive
-    # elsewhere.  A filename pattern is case-sensitive everywhere. A regex
-    # pattern's case-sensitivity is defined by the regex. This means it is by
-    # default case-sensitive, but this can be changed using Python's inline
-    # regex option syntax. E.g.:
-    #         Makefile            /^(?i)makefile.*$/   # case-INsensitive regex
-
-    Python              .py
-    Python              .pyw
-    Perl                .pl
-    Ruby                .rb
-    Tcl                 .tcl
-    XML                 .xml
-    XML                 .kpf
-    XML                 .xul
-    XML                 .rdf
-    XML                 .xslt
-    XML                 .xsl
-    XML                 .wxs
-    XML                 .wxi
-    HTML                .htm
-    HTML                .html
-    XML                 .xhtml
-    Makefile            /^[Mm]akefile.*$/
-    PHP                 .php
-    JavaScript          .js
-    CSS                 .css
-    C++                 .c       # C++ because then we can use //-style comments
-    C++                 .cpp
-    C++                 .cxx
-    C++                 .cc
-    C++                 .h
-    C++                 .hpp
-    C++                 .hxx
-    C++                 .hh
-    IDL                 .idl
-    Text                .txt
-    Fortran             .f
-    Fortran             .f90
-    Shell               .sh
-    Shell               .csh
-    Shell               .ksh
-    Shell               .zsh
-    Java                .java
-    C#                  .cs
-    TeX                 .tex
-
-    # Some Komodo-specific file extensions
-    Python              .ksf  # Fonts & Colors scheme files
-    Text                .kkf  # Keybinding schemes files
-"""
 
 class ContentTypesRegistry:
     """A class that handles determining the file type of a given path.
