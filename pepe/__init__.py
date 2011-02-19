@@ -82,6 +82,7 @@ Preprocessor Syntax
     defined(varName)    Return true if given variable is defined.
 
 """
+import logging
 
 __version_info__ = (1, 1, 0)
 __version__ = '.'.join(map(str, __version_info__))
@@ -91,9 +92,18 @@ import sys
 import types
 import re
 from pkg_resources import resource_filename
-from pepe.data import COMMENT_GROUPS
+try:
+    from pepe.data import COMMENT_GROUPS
 
-DEFAULT_CONTENT_TYPES = open(resource_filename(__name__, "content.types")).read()
+# TODO: Remove this later.
+except ImportError:
+    from data import COMMENT_GROUPS
+
+
+DEFAULT_CONTENT_TYPES = open(
+    resource_filename(__name__, "content.types")).read()
+
+logger = logging.getLogger("pepe")
 
 
 class PreprocessorError(Exception):
@@ -122,86 +132,6 @@ class PreprocessorError(Exception):
         return s
 
 
-#---- internal logging facility
-
-class _Logger:
-    DEBUG, INFO, WARN, ERROR, CRITICAL = range(5)
-
-    def __init__(self, name, level=None, streamOrFileName=sys.stderr):
-        self._name = name
-        if level is None:
-            self.level = self.WARN
-        else:
-            self.level = level
-        if type(streamOrFileName) == types.StringType:
-            self.stream = open(streamOrFileName, 'w')
-            self._opennedStream = 1
-        else:
-            self.stream = streamOrFileName
-            self._opennedStream = 0
-
-    def __del__(self):
-        if self._opennedStream:
-            self.stream.close()
-
-    def getLevel(self):
-        return self.level
-
-    def setLevel(self, level):
-        self.level = level
-
-    def _getLevelName(self, level):
-        levelNameMap = {
-            self.DEBUG: "DEBUG",
-            self.INFO: "INFO",
-            self.WARN: "WARN",
-            self.ERROR: "ERROR",
-            self.CRITICAL: "CRITICAL",
-        }
-        return levelNameMap[level]
-
-    def isEnabled(self, level):
-        return level >= self.level
-
-    def isDebugEnabled(self): return self.isEnabled(self.DEBUG)
-
-    def isInfoEnabled(self): return self.isEnabled(self.INFO)
-
-    def isWarnEnabled(self): return self.isEnabled(self.WARN)
-
-    def isErrorEnabled(self): return self.isEnabled(self.ERROR)
-
-    def isFatalEnabled(self): return self.isEnabled(self.FATAL)
-
-    def log(self, level, msg, *args):
-        if level < self.level:
-            return
-        message = "%s: %s: " % (self._name, self._getLevelName(level).lower())
-        message = message + (msg % args) + "\n"
-        self.stream.write(message)
-        self.stream.flush()
-
-    def debug(self, msg, *args):
-        self.log(self.DEBUG, msg, *args)
-
-    def info(self, msg, *args):
-        self.log(self.INFO, msg, *args)
-
-    def warn(self, msg, *args):
-        self.log(self.WARN, msg, *args)
-
-    def error(self, msg, *args):
-        self.log(self.ERROR, msg, *args)
-
-    def fatal(self, msg, *args):
-        self.log(self.CRITICAL, msg, *args)
-
-log = _Logger("pepe", _Logger.WARN)
-
-
-
-#---- internal support stuff
-
 def _evaluate(expr, defines):
     """Evaluate the given expression string with the given context.
 
@@ -225,7 +155,7 @@ def _evaluate(expr, defines):
         elif msg.startswith("invalid syntax"):
             msg = "invalid syntax: '%s'" % expr
         raise PreprocessorError(msg, defines['__FILE__'], defines['__LINE__'])
-    log.debug("evaluate %r -> %s (defines=%r)", expr, rv, defines)
+    logger.debug("evaluate %r -> %s (defines=%r)", expr, rv, defines)
     return rv
 
 
@@ -281,7 +211,7 @@ def preprocess(infile,
     """
     if _preprocessed_files is None:
         _preprocessed_files = []
-    log.info("preprocess(infile=%r, outfile=%r, defines=%r, force=%r, "\
+    logger.info("preprocess(infile=%r, outfile=%r, defines=%r, force=%r, "\
              "keepLines=%r, includePath=%r, contentType=%r, "\
              "__preprocessedFiles=%r)", infile, outfile, defines,
              should_force_overwrite,
@@ -299,7 +229,7 @@ def preprocess(infile,
         content_type = registry.get_content_type(infile)
         if content_type is None:
             content_type = "Text"
-            log.warn("defaulting content type for '%s' to '%s'",
+            logger.warn("defaulting content type for '%s' to '%s'",
                      infile, content_type)
     try:
         cgs = COMMENT_GROUPS[content_type]
@@ -367,7 +297,7 @@ def preprocess(infile,
     lineNum = 0
     for line in lines:
         lineNum += 1
-        log.debug("line %d: %r", lineNum, line)
+        logger.debug("line %d: %r", lineNum, line)
         defines['__LINE__'] = lineNum
 
         # Is this line a preprocessor stmt line?
@@ -382,7 +312,7 @@ def preprocess(infile,
 
         if match:
             op = match.group("op")
-            log.debug("%r stmt (states: %r)", op, states)
+            logger.debug("%r stmt (states: %r)", op, states)
             if op == "define":
                 if not (states and states[-1][0] == SKIP):
                     var, val = match.group("var", "val")
@@ -499,13 +429,13 @@ def preprocess(infile,
                     raise PreprocessorError("#error: " + error,
                                             defines['__FILE__'],
                                             defines['__LINE__'], line)
-            log.debug("states: %r", states)
+            logger.debug("states: %r", states)
             if should_keep_lines:
                 fout.write("\n")
         else:
             try:
                 if states[-1][0] == EMIT:
-                    log.debug("emit line (%s)" % states[-1][1])
+                    logger.debug("emit line (%s)" % states[-1][1])
                     # Substitute all defines into line.
                     # XXX Should avoid recursive substitutions. But that
                     #     would be a pain right now.
@@ -516,10 +446,10 @@ def preprocess(infile,
                             sline = sline.replace(name, str(value))
                     fout.write(sline)
                 elif should_keep_lines:
-                    log.debug("keep blank line (%s)" % states[-1][1])
+                    logger.debug("keep blank line (%s)" % states[-1][1])
                     fout.write("\n")
                 else:
-                    log.debug("skip line (%s)" % states[-1][1])
+                    logger.debug("skip line (%s)" % states[-1][1])
             except IndexError:
                 raise PreprocessorError("superfluous #endif before this line",
                                         defines['__FILE__'],
@@ -559,10 +489,10 @@ class ContentTypesRegistry:
         self._loadContentType(DEFAULT_CONTENT_TYPES)
         localContentTypesPath = join(dirname(__file__), "content.types")
         if exists(localContentTypesPath):
-            log.debug("load content types file: `%r'" % localContentTypesPath)
+            logger.debug("load content types file: `%r'" % localContentTypesPath)
             self._loadContentType(open(localContentTypesPath, 'r').read())
         for path in self.content_types_config_files:
-            log.debug("load content types file: `%r'" % path)
+            logger.debug("load content types file: `%r'" % path)
             self._loadContentType(open(path, 'r').read())
 
     def _loadContentType(self, content, path=None):
@@ -609,7 +539,7 @@ class ContentTypesRegistry:
         # Try to determine from the path.
         if not contentType and self.filenameMap.has_key(basename):
             contentType = self.filenameMap[basename]
-            log.debug("Content type of '%s' is '%s' (determined from full "\
+            logger.debug("Content type of '%s' is '%s' (determined from full "\
                       "path).", path, contentType)
             # Try to determine from the suffix.
         if not contentType and '.' in basename:
@@ -619,14 +549,14 @@ class ContentTypesRegistry:
                 suffix = suffix.lower()
             if self.suffixMap.has_key(suffix):
                 contentType = self.suffixMap[suffix]
-                log.debug("Content type of '%s' is '%s' (determined from "\
+                logger.debug("Content type of '%s' is '%s' (determined from "\
                           "suffix '%s').", path, contentType, suffix)
                 # Try to determine from the registered set of regex patterns.
         if not contentType:
             for regex, ctype in self.regexMap.items():
                 if regex.search(basename):
                     contentType = ctype
-                    log.debug(
+                    logger.debug(
                         "Content type of '%s' is '%s' (matches regex '%s')",
                         path, contentType, regex.pattern)
                     break
@@ -643,111 +573,6 @@ def getDefaultContentTypesRegistry():
     if _gDefaultContentTypesRegistry is None:
         _gDefaultContentTypesRegistry = ContentTypesRegistry()
     return _gDefaultContentTypesRegistry
-
-
-def parse_command_line():
-    """\
-    Parses the command line and returns a ``Namespace`` object
-    containing options and their values.
-
-    :return:
-        A ``Namespace`` object containing options and their values.
-    """
-
-    import argparse
-
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument('-v',
-                        '--version',
-                        action='version',
-                        version='%(prog)s ' + __version__,
-                        help="Show version number and exit.")
-    parser.add_argument('input_file',
-                        metavar='INFILE',
-                        type=str,
-                        help='Path of the input file to be preprocessed')
-    parser.add_argument('-V',
-                        '--verbose',
-                        dest='should_be_verbose',
-                        action='store_true',
-                        default=False,
-                        help="Enables verbose logging")
-    parser.add_argument('-l',
-                        '--log-level',
-                        '--logging-level',
-                        dest='logging_level',
-                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR',
-                                 'CRITICAL'],
-                        default='INFO',
-                        help="Logging level.")
-    parser.add_argument('-o',
-                        '--output',
-                        dest='output_file',
-                        default=sys.stdout,
-                        help='Output file name (default STDOUT)')
-    parser.add_argument('-f',
-                        '--force',
-                        dest='should_force_overwrite',
-                        action='store_true',
-                        default=False,
-                        help='Force overwrite existing output file.')
-    parser.add_argument('-D',
-                        '--define',
-                        metavar="DEFINITION",
-                        dest='definitions',
-                        action='append',
-                        help="""\
-Define a variable for preprocessing. <define>
-can simply be a variable name (in which case it
-will be true) or it can be of the form
-<var>=<val>. An attempt will be made to convert
-<val> to an integer so -D 'FOO=0' will create a
-false value.""")
-    parser.add_argument('-I',
-                        '--include',
-                        dest='include_paths',
-                        action='append',
-                        default=['.'],
-                        help='Add a directory to the include path for #include directives.')
-    parser.add_argument('-k',
-                        '--keep-lines',
-                        dest='should_keep_lines',
-                        action='store_true',
-                        default=False,
-                        help='''\
-Emit empty lines for preprocessor statement
-lines and skipped output lines. This allows line
-numbers to stay constant.''')
-    parser.add_argument('-s',
-                        '--substitute',
-                        dest='should_substitute',
-                        action='store_true',
-                        default=False,
-                        help='''\
-Substitute #defines into emitted lines.
-(Disabled by default to avoid polluting strings''')
-    parser.add_argument('-c',
-                        '--content-types-path',
-                        '--content-types-config',
-                        dest='content_types_config_files',
-                        action='append',
-                        help="""\
-Specify a path to a content.types file to assist
-with file type determination. Use the -p or -P flags
-to display content types as read by pepe.""")
-    parser.add_argument('-p',
-                        '--print-content-types',
-                        dest='should_print_content_types',
-                        action='store_true',
-                        default=False,
-                        help='Display content types and exit.')
-    parser.add_argument('-P',
-                        '--print-content-types-config',
-                        dest='should_print_content_types_config',
-                        action='store_true',
-                        default=False,
-                        help='Display content types configuration and exit.')
-    return parser.parse_args()
 
 
 def parse_int_token(token):
@@ -913,7 +738,6 @@ def parse_definition_expr(expr, default_value=None):
         raise ValueError("Invalid definition symbol `%s`" % str(define))
 
 
-
 def parse_definitions(definitions):
     """\
     Parses a list of macro definitions and returns a "symbol table"
@@ -949,10 +773,165 @@ def parse_definitions(definitions):
     defines = {}
     if definitions:
         for definition in definitions:
-            define, value = parse_definition_expr(definition, default_value=None)
+            define, value = parse_definition_expr(definition,
+                                                  default_value=None)
             defines[define] = value
     return defines
 
+
+def parse_command_line():
+    """\
+    Parses the command line and returns a ``Namespace`` object
+    containing options and their values.
+
+    :return:
+        A ``Namespace`` object containing options and their values.
+    """
+
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument('-v',
+                        '--version',
+                        action='version',
+                        version='%(prog)s ' + __version__,
+                        help="Show version number and exit.")
+    parser.add_argument('input_file',
+                        metavar='INFILE',
+                        type=str,
+                        help='Path of the input file to be preprocessed')
+    parser.add_argument('-q',
+                        '--quiet',
+                        dest='should_be_quiet',
+                        action='store_true',
+                        default=False,
+                        help="Disables verbose logging")
+    parser.add_argument('-L',
+                        '--log-level',
+                        '--logging-level',
+                        dest='logging_level',
+                        choices=[
+                            'DEBUG',
+                            'INFO',
+                            'WARNING',
+                            'ERROR',
+                            'CRITICAL'
+                            ],
+                        default='INFO',
+                        help="Logging level.")
+    parser.add_argument('-o',
+                        '--output',
+                        dest='output_file',
+                        default=sys.stdout,
+                        help='Output file name (default STDOUT)')
+    parser.add_argument('-f',
+                        '--force',
+                        dest='should_force_overwrite',
+                        action='store_true',
+                        default=False,
+                        help='Force overwrite existing output file.')
+    parser.add_argument('-D',
+                        '--define',
+                        metavar="DEFINITION",
+                        dest='definitions',
+                        action='append',
+                        help="""\
+Define a variable for preprocessing. <define>
+can simply be a variable name (in which case it
+will be true) or it can be of the form
+<var>=<val>. An attempt will be made to convert
+<val> to an integer so -D 'FOO=0' will create a
+false value.""")
+    parser.add_argument('-I',
+                        '--include',
+                        dest='include_paths',
+                        action='append',
+                        default=['.'],
+                        help='Add a directory to the include path for #include directives.')
+    parser.add_argument('-k',
+                        '--keep-lines',
+                        dest='should_keep_lines',
+                        action='store_true',
+                        default=False,
+                        help='''\
+Emit empty lines for preprocessor statement
+lines and skipped output lines. This allows line
+numbers to stay constant.''')
+    parser.add_argument('-s',
+                        '--substitute',
+                        dest='should_substitute',
+                        action='store_true',
+                        default=False,
+                        help='''\
+Substitute #defines into emitted lines.
+(Disabled by default to avoid polluting strings''')
+    parser.add_argument('-c',
+                        '--content-types-path',
+                        '--content-types-config',
+                        dest='content_types_config_files',
+                        action='append',
+                        help="""\
+Specify a path to a content.types file to assist
+with file type determination. Use the -p or -P flags
+to display content types as read by pepe.""")
+    parser.add_argument('-p',
+                        '--print-content-types',
+                        dest='should_print_content_types',
+                        action='store_true',
+                        default=False,
+                        help='Display content types and exit.')
+    parser.add_argument('-P',
+                        '--print-content-types-config',
+                        dest='should_print_content_types_config',
+                        action='store_true',
+                        default=False,
+                        help='Display content types configuration and exit.')
+    return parser.parse_args()
+
+
+class NullLoggingHandler(logging.Handler):
+    """
+    Attach this handler to your logger to disable all logging.
+    """
+    def emit(self, record):
+        pass
+
+
+def set_up_logging(logger, args):
+    """
+    Sets up logging for pepe.
+
+    :param logger:
+        The logger object to update.
+    :param args:
+        Arguments namespace provided by ``argparse``.
+    :return:
+        logging level ``int`` or None
+    """
+    LOGGING_LEVELS = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL,
+        'NONE': None,
+    }
+
+    logging_level = LOGGING_LEVELS.get(args.logging_level)
+    if args.should_be_quiet or logging_level is None:
+        logging_handler = NullLoggingHandler()
+    else:
+        logger.setLevel(logging_level)
+        logging_handler = logging.StreamHandler()
+        logging_handler.setLevel(logging_level)
+        logging_handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s:%(name)s:%(levelname)s: %(message)s"
+                )
+            )
+
+    logger.addHandler(logging_handler)
+    return logging_level
 
 def main():
     """\
@@ -960,10 +939,8 @@ def main():
     """
     args = parse_command_line()
 
+    logging_level = set_up_logging(logger, args)
     defines = parse_definitions(args.definitions)
-
-    if args.should_be_verbose:
-        log.setLevel(log.DEBUG)
 
     try:
         content_types_registry = ContentTypesRegistry(
@@ -977,15 +954,14 @@ def main():
                    args.should_substitute,
                    content_types_registry=content_types_registry)
     except PreprocessorError, ex:
-        if log.isDebugEnabled():
+        if logging_level == logging.DEBUG:
             import traceback
-
             traceback.print_exc(file=sys.stderr)
         else:
             sys.stderr.write("pepe: error: %s\n" % str(ex))
         return 1
 
+    return 0
+
 if __name__ == "__main__":
-    main()
-
-
+    sys.exit(main())
