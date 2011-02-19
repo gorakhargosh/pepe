@@ -4,4 +4,6 @@
 bin/
 .svn/
 .idea/
+dist/
+*.egg-info/
 

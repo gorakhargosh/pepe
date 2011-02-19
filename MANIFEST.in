@@ -2,7 +2,6 @@ include MANIFEST
 include README
 include LICENSE
 include AUTHORS
-include *.txt
 recursive-include test/inputs *
 recursive-include test/outputs *
 recursive-include pepe/ *.py *.types

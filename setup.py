@@ -11,7 +11,7 @@ import sys
 import imp
 from setuptools import setup
 
-pepe = imp.load_source('pepe', 'pepe.py')
+pepe = imp.load_source('pepe', os.path.join('pepe', '__init__.py'))
 
 def read_file(filename):
     """
