@@ -895,6 +895,93 @@ def parse_bool_token(token):
     return {'true': True, 'false': False}.get(token.lower(), token)
 
 
+def parse_number_token(token):
+    """\
+    Parses a number token to convert it to a float or int.
+    Caveat: Float values like 2e-23 will not be parsed.
+
+    :param token:
+        String token to be converted.
+    :type token:
+        ``str``
+    :return:
+        ``float`` or ``int`` or raises a ``ValueError`` if a parse error
+        occurred.
+    """
+    return float(token) if '.' in token else parse_int_token(token)
+
+
+def parse_definition_expr(expr, default_value=None):
+    """\
+    Parses a definition expression and returns a key-value pair
+    as a tuple.
+
+    Each definition expression should be in one of these two formats:
+
+        * <variable>=<value>
+        * <variable>
+
+    :param expr:
+        String expression to be parsed.
+    :param default_value:
+        (Default None) When a definition is encountered that has no value, this
+        will be used as its value.
+    :return:
+        A (define, value) tuple
+
+        or raises a ``ValueError`` if an invalid
+        definition expression is provided.
+
+        or raises ``AttributeError`` if None is provided for ``expr``.
+
+    Usage:
+
+        >>> parse_definition_expr('DEBUG=1')
+        ('DEBUG', 1)
+        >>> parse_definition_expr('FOOBAR=0x40')
+        ('FOOBAR', 64)
+        >>> parse_definition_expr('FOOBAR=whatever')
+        ('FOOBAR', 'whatever')
+        >>> parse_definition_expr('FOOBAR=false')
+        ('FOOBAR', False)
+        >>> parse_definition_expr('FOOBAR=TRUE')
+        ('FOOBAR', True)
+        >>> parse_definition_expr('FOOBAR', default_value=None)
+        ('FOOBAR', None)
+        >>> parse_definition_expr('FOOBAR', default_value=1)
+        ('FOOBAR', 1)
+        >>> parse_definition_expr('FOOBAR=ah=3')
+        ('FOOBAR', 'ah=3')
+        >>> parse_definition_expr(' FOOBAR=ah=3 ')
+        ('FOOBAR', 'ah=3 ')
+        >>> parse_definition_expr(" ")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid definition symbol ` `
+        >>> parse_definition_expr(None)
+        Traceback (most recent call last):
+            ...
+        AttributeError: 'NoneType' object has no attribute 'split'
+    """
+    try:
+        define, value = expr.split('=', 1)
+        try:
+            value = parse_number_token(value)
+        except ValueError:
+            value = parse_bool_token(value)
+    except ValueError:
+        if expr:
+            define, value = expr, default_value
+        else:
+            raise ValueError("Invalid definition expression `%s`" % str(expr))
+    d = define.strip()
+    if d:
+        return d, value
+    else:
+        raise ValueError("Invalid definition symbol `%s`" % str(define))
+
+
+
 def parse_definitions(definitions):
     """\
     Parses a list of macro definitions and returns a "symbol table"
@@ -929,16 +1016,7 @@ def parse_definitions(definitions):
     defines = {}
     if definitions:
         for definition in definitions:
-            try:
-                define, value = definition.split('=', 1)
-                try:
-                    # Caveat: Float values like 2e-23 will not be parsed.
-                    value = float(value) if '.' in value else parse_int_token(
-                        value)
-                except ValueError:
-                    value = parse_bool_token(value)
-            except ValueError:
-                define, value = definition, None
+            define, value = parse_definition_expr(definition, default_value=None)
             defines[define] = value
     return defines
 
@@ -953,14 +1031,12 @@ def main():
 
     if args.should_be_verbose:
         log.setLevel(log.DEBUG)
-    outfile = args.output_file
-    infile = args.input_file
 
     try:
         content_types_registry = ContentTypesRegistry(
             args.content_types_config_files)
-        preprocess(infile,
-                   outfile,
+        preprocess(args.input_file,
+                   args.output_file,
                    defines,
                    args.should_force_overwrite,
                    args.should_keep_lines,
