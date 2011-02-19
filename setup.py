@@ -60,7 +60,8 @@ Topic :: Text Processing :: Filters""".split("\n"),
                        "preprocess",
                        "portable",
                        ]),
-    py_modules=["pepe"],
+    packages=["pepe"],
+    include_package_data=True,
     entry_points={
         'console_scripts': [
             'pepe = pepe:main',
