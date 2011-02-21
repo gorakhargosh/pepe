@@ -17,7 +17,8 @@ class ContentTypesDatabase(object):
 
     Usage:
         >>> db = ContentTypesDatabase()
-        >>> assert db.guess_content_type("__init__.py") == "Python"
+        >>> db.add_config_file('content-types.yaml')
+        >>> assert db.guess_content_type("__init__.py") == "python"
     """
 
     def __init__(self):
@@ -102,8 +103,8 @@ class ContentTypesDatabase(object):
         # Try to determine from the path.
         if not content_type and self._filename_map.has_key(file_basename):
             content_type = self._filename_map[file_basename]
-            logger.debug("Content type of '%s' is '%s' (determined from full "\
-                         "path).", pathname, content_type)
+            #logger.debug("Content type of '%s' is '%s' (determined from full "\
+            #             "path).", pathname, content_type)
 
         # Try to determine from the suffix.
         if not content_type and '.' in file_basename:
@@ -111,8 +112,8 @@ class ContentTypesDatabase(object):
             extension = extension_case_transform_func(extension)
             try:
                 content_type = self._extension_map[extension]
-                logger.debug("Content type of '%s' is '%s' (determined from "\
-                             "suffix '%s').", pathname, content_type, extension)
+                #logger.debug("Content type of '%s' is '%s' (determined from "\
+                #             "suffix '%s').", pathname, content_type, extension)
             except KeyError:
                 pass
 
@@ -121,9 +122,9 @@ class ContentTypesDatabase(object):
             for regexp, _content_type in self._regexp_map.iteritems():
                 if regexp.search(file_basename):
                     content_type = _content_type
-                    logger.debug(
-                        "Content type of '%s' is '%s' (matches regexp '%s')",
-                        pathname, content_type, regexp.pattern)
+                    #logger.debug(
+                    #    "Content type of '%s' is '%s' (matches regexp '%s')",
+                    #    pathname, content_type, regexp.pattern)
                     break
 
         # Try to determine from the file contents.
