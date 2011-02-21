@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import sys
 import re
@@ -14,25 +15,6 @@ if sys.platform.startswith('win'):
 
 class ContentTypesDatabase(object):
     """A class that handles determining the content type of a file path.
-
-    Usage:
-        >>> db = ContentTypesDatabase()
-        >>> db.add_config_file('content-types.yaml')
-        >>> g = db.guess_content_type
-        >>> assert g("__init__.py") == "python"
-        >>> assert g("Makefile") == "Makefile"
-        >>> assert g("Makefile.gmake") == "Makefile"
-        >>> assert g("Makefile.py") == "python"
-        >>> assert g("foobar.rb") == "ruby"
-        >>> assert g("wscript") == "python"
-        >>> assert g("foo.coffee") == "coffee-script"
-        >>> assert g("Rakefile") == "ruby"
-        >>> assert g("foobar.xml") == "xml"
-        >>> assert g("foobar.html") == "html"
-        >>> assert g("foo7a738fg") == None
-        >>> assert g("foo.rst") == "structured-text"
-        >>> assert g("foo.md") == "structured-text"
-        >>> assert g("foo.markdown") == "structured-text"
     """
 
     def __init__(self):
@@ -50,7 +32,23 @@ class ContentTypesDatabase(object):
         :param content_type:
             The content type for which the comment group will be determined.
         :return:
-            Comment group for the specified content type.
+            Comment group for the specified content type. Raises a ``KeyError``
+            exception if a comment group for the specified content type
+            is not found.
+
+        Usage:
+            >>> db = ContentTypesDatabase()
+            >>> db.add_config_file('content-types.yaml')
+            >>> g = db.get_comment_group
+            >>> g("python")
+            [['#', '']]
+            >>> g("javascript")
+            [['/*', '*/'], ['//', '']]
+            >>> g("MIIEogIBAAKCAQEAxLc7h/JVoiJ9zngIjNqf4ZnhXoqTfVEdfXEq7hFW1cQwqRsr\
+ZvuV6SxBVxdQ4Glg5wR59CLM9qePRtXRWbR+jeAmzEGKhohKieIw4iYwuJxu5jk7")
+            Traceback (most recent call last):
+                ...
+            KeyError: 'MIIEogIBAAKCAQEAxLc7h/JVoiJ9zngIjNqf4ZnhXoqTfVEdfXEq7hFW1cQwqRsrZvuV6SxBVxdQ4Glg5wR59CLM9qePRtXRWbR+jeAmzEGKhohKieIw4iYwuJxu5jk7'
         """
         return self._comment_groups[content_type]
 
@@ -110,6 +108,25 @@ class ContentTypesDatabase(object):
         :return:
             Returns the content type or ``None`` if the content type
             could not be determined.
+
+        Usage:
+            >>> db = ContentTypesDatabase()
+            >>> db.add_config_file('content-types.yaml')
+            >>> g = db.guess_content_type
+            >>> assert g("__init__.py") == "python"
+            >>> assert g("Makefile") == "Makefile"
+            >>> assert g("Makefile.gmake") == "Makefile"
+            >>> assert g("Makefile.py") == "python"
+            >>> assert g("foobar.rb") == "ruby"
+            >>> assert g("wscript") == "python"
+            >>> assert g("foo.coffee") == "coffee-script"
+            >>> assert g("Rakefile") == "ruby"
+            >>> assert g("foobar.xml") == "xml"
+            >>> assert g("foobar.html") == "html"
+            >>> assert g("foo7a738fg") == None
+            >>> assert g("foo.rst") == "structured-text"
+            >>> assert g("foo.md") == "structured-text"
+            >>> assert g("foo.markdown") == "structured-text"
         """
         file_basename = os.path.basename(pathname)
         content_type = None
