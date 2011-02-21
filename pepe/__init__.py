@@ -91,8 +91,12 @@ import os
 import sys
 import types
 import re
+# We don't use cStringIO because it may have issues with writing UTF-8 encoded files.
+# http://mail.python.org/pipermail/python-list/2007-June/1097078.html
+from StringIO import StringIO
 from pkg_resources import resource_filename
 from pathtools.path import absolute_path
+
 try:
     from pepe.content_types import ContentTypesDatabase
 # TODO: Remove this later.
@@ -169,10 +173,10 @@ def preprocess(input_file,
     """
     Preprocesses the specified file.
 
-    :param input_file:
+    :param input_filename:
         The input path.
-    :param output_file:
-        The output path or stream (default is sys.stdout).
+    :param output_filename:
+        The output file (NOT path).
     :param defines:
         a dictionary of defined variables that will be
         understood in preprocessor statements. Keys must be strings and,
@@ -191,21 +195,21 @@ def preprocess(input_file,
 
     # Options that can later be turned into function parameters.
     include_paths = options.include_paths
-    should_force_overwrite = options.should_force_overwrite
     should_keep_lines = options.should_keep_lines
     should_substitute = options.should_substitute
     default_content_type = options.default_content_type
+    input_filename = input_file.name
 
-    # Ensure files are not recursively preprocessed.
+    # Ensure preprocessing isn't cyclic(?).
     _preprocessed_files = _preprocessed_files or []
-    input_file_absolute_path = absolute_path(input_file)
+    input_file_absolute_path = absolute_path(input_filename)
     if input_file_absolute_path in _preprocessed_files:
         raise PreprocessorError("detected recursive #include of '%s'"\
-                                % input_file)
+                                % input_filename)
     _preprocessed_files.append(input_file_absolute_path)
 
     # Determine the content type and comment info for the input file.
-    comment_groups = content_types_db.get_comment_group_for_path(input_file, default_content_type)
+    comment_groups = content_types_db.get_comment_group_for_path(input_filename, default_content_type)
 
     # Generate statement parsing regexes. Basic format:
     #       <comment-prefix> <preprocessor-stmt> <comment-suffix>
@@ -249,24 +253,16 @@ def preprocess(input_file,
     # Process the input file.
     # (Would be helpful if I knew anything about lexing and parsing
     # simple grammars.)
-    fin = open(input_file, 'rb')
-    lines = fin.readlines()
-    fin.close()
-    if type(output_file) in types.StringTypes:
-        if should_force_overwrite and os.path.exists(output_file):
-            os.chmod(output_file, 0777)
-            os.remove(output_file)
-        fout = open(output_file, 'wb')
-    else:
-        fout = output_file
+    input_lines = input_file.readlines()
+    temp_output_buffer = StringIO()
 
-    defines['__FILE__'] = input_file
+    defines['__FILE__'] = input_filename
     SKIP, EMIT = range(2) # states
     states = [(EMIT, # a state is (<emit-or-skip-lines-in-this-section>,
                0, #             <have-emitted-in-this-if-block>,
                0)]     #             <have-seen-'else'-in-this-if-block>)
     lineNum = 0
-    for line in lines:
+    for line in input_lines:
         lineNum += 1
         logger.debug("line %d: %r", lineNum, line)
         defines['__LINE__'] = lineNum
@@ -312,7 +308,7 @@ def preprocess(input_file,
                         # This is the first include form: #include "path"
                         f = match.group("fname")
 
-                    for d in [os.path.dirname(input_file)] + include_paths:
+                    for d in [os.path.dirname(input_filename)] + include_paths:
                         fname = os.path.normpath(os.path.join(d, f))
                         if os.path.exists(fname):
                             break
@@ -322,7 +318,7 @@ def preprocess(input_file,
                             "\"%s\" on include path: %r"\
                             % (f, include_paths))
                     defines = preprocess(fname,
-                                         fout,
+                                         temp_output_buffer,
                                          defines=defines,
                                          options=options,
                                          content_types_db=content_types_db,
@@ -401,7 +397,7 @@ def preprocess(input_file,
                                             defines['__LINE__'], line)
             logger.debug("states: %r", states)
             if should_keep_lines:
-                fout.write("\n")
+                temp_output_buffer.write("\n")
         else:
             try:
                 if states[-1][0] == EMIT:
@@ -414,10 +410,10 @@ def preprocess(input_file,
                         for name in reversed(sorted(defines, key=len)):
                             value = defines[name]
                             sline = sline.replace(name, str(value))
-                    fout.write(sline)
+                    temp_output_buffer.write(sline)
                 elif should_keep_lines:
                     logger.debug("keep blank line (%s)" % states[-1][1])
-                    fout.write("\n")
+                    temp_output_buffer.write("\n")
                 else:
                     logger.debug("skip line (%s)" % states[-1][1])
             except IndexError:
@@ -431,8 +427,8 @@ def preprocess(input_file,
         raise PreprocessorError("superfluous #endif on or before this line",
                                 defines['__FILE__'], defines['__LINE__'])
 
-    if fout != output_file:
-        fout.close()
+    if temp_output_buffer != output_file:
+        temp_output_buffer.close()
 
     return defines
 
@@ -662,7 +658,7 @@ def parse_command_line():
                         action='version',
                         version='%(prog)s ' + __version__,
                         help="Show version number and exit.")
-    parser.add_argument('input_file',
+    parser.add_argument('input_filename',
                         metavar='INPUT_FILE',
                         type=str,
                         help='Path of the input file to be preprocessed')
@@ -689,7 +685,7 @@ def parse_command_line():
     parser.add_argument('-o',
                         '--output',
                         metavar="OUTPUT_FILE",
-                        dest='output_file',
+                        dest='output_filename',
                         default=sys.stdout,
                         help='Output file name (default STDOUT)')
     parser.add_argument('-f',
@@ -825,11 +821,24 @@ def main():
         for config_file in args.content_types_config_files:
             content_types_db.add_config_file(config_file)
 
-        preprocess(input_file=args.input_file,
-                   output_file=args.output_file,
-                   defines=defines,
-                   options=args,
-                   content_types_db=content_types_db)
+        with open(args.input_filename, 'rb') as input_file:
+            if os.path.exists(args.output_filename):
+                if args.should_force_overwrite:
+                    with open(args.output_filename, 'wb') as output_file:
+                        preprocess(input_file=input_file,
+                                   output_file=output_file,
+                                   defines=defines,
+                                   options=args,
+                                   content_types_db=content_types_db)
+                else:
+                    raise IOError("File `%s` exists - cannot overwrite. (Use -f to force overwrite.)" % args.output_filename)
+            else:
+                with open(args.output_filename, 'wb') as output_file:
+                    preprocess(input_file=input_file,
+                               output_file=output_file,
+                               defines=defines,
+                               options=args,
+                               content_types_db=content_types_db)
     except PreprocessorError, ex:
         if logging_level == logging.DEBUG:
             import traceback
