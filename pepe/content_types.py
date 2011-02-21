@@ -13,12 +13,26 @@ if sys.platform.startswith('win'):
 
 
 class ContentTypesDatabase(object):
-    """A class that handles determining the file type of a given path.
+    """A class that handles determining the content type of a file path.
 
     Usage:
         >>> db = ContentTypesDatabase()
         >>> db.add_config_file('content-types.yaml')
-        >>> assert db.guess_content_type("__init__.py") == "python"
+        >>> g = db.guess_content_type
+        >>> assert g("__init__.py") == "python"
+        >>> assert g("Makefile") == "Makefile"
+        >>> assert g("Makefile.gmake") == "Makefile"
+        >>> assert g("Makefile.py") == "python"
+        >>> assert g("foobar.rb") == "ruby"
+        >>> assert g("wscript") == "python"
+        >>> assert g("foo.coffee") == "coffee-script"
+        >>> assert g("Rakefile") == "ruby"
+        >>> assert g("foobar.xml") == "xml"
+        >>> assert g("foobar.html") == "html"
+        >>> assert g("foo7a738fg") == None
+        >>> assert g("foo.rst") == "text"
+        >>> assert g("foo.md") == "text"
+        >>> assert g("foo.markdown") == "text"
     """
 
     def __init__(self):
@@ -128,10 +142,11 @@ class ContentTypesDatabase(object):
                     break
 
         # Try to determine from the file contents.
-        with open(pathname, 'rb') as f:
-            content = f.read()
-            if content.startswith("<?xml"):  # cheap XML sniffing
-                content_type = "XML"
+        if os.path.exists(pathname):
+            with open(pathname, 'rb') as f:
+                content = f.read()
+                if content.startswith("<?xml"):  # cheap XML sniffing
+                    content_type = "XML"
 
         # TODO: Try to determine from mime-type.
 
