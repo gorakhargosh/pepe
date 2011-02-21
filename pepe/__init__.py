@@ -92,13 +92,11 @@ import sys
 import types
 import re
 from pkg_resources import resource_filename
-from pathtools import absolute_path
+from pathtools.path import absolute_path
 try:
-    from pepe.data import COMMENT_GROUPS
     from pepe.content_types import ContentTypesDatabase
 # TODO: Remove this later.
 except ImportError:
-    from data import COMMENT_GROUPS
     from content_types import ContentTypesDatabase
 
 
