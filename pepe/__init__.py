@@ -265,7 +265,12 @@ def preprocess(input_file,
     # (Would be helpful if I knew anything about lexing and parsing
     # simple grammars.)
     input_lines = input_file.readlines()
-    temp_output_buffer = StringIO()
+    if _depth == 0:
+        # Only at recursion depth 0 is the temporary buffer created.
+        temp_output_buffer = StringIO()
+    else:
+        # At deeper levels, the temporary buffer is the output file.
+        temp_output_buffer = output_file
 
     defines['__FILE__'] = input_filename
     SKIP, EMIT = range(2) # states
@@ -328,13 +333,14 @@ def preprocess(input_file,
                             "could not find #include'd file "\
                             "\"%s\" on include path: %r"\
                             % (f, include_paths))
-                    defines = preprocess(fname,
-                                         temp_output_buffer,
-                                         defines=defines,
-                                         options=options,
-                                         content_types_db=content_types_db,
-                                         _preprocessed_files=_preprocessed_files,
-                                         _depth=1)
+                    with open(fname, 'rb') as f:
+                        defines = preprocess(f,
+                                             temp_output_buffer,
+                                             defines=defines,
+                                             options=options,
+                                             content_types_db=content_types_db,
+                                             _preprocessed_files=_preprocessed_files,
+                                             _depth=1)
             elif op in ("if", "ifdef", "ifndef"):
                 if op == "if":
                     expr = match.group("expr")
