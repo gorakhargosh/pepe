@@ -30,9 +30,9 @@ class ContentTypesDatabase(object):
         >>> assert g("foobar.xml") == "xml"
         >>> assert g("foobar.html") == "html"
         >>> assert g("foo7a738fg") == None
-        >>> assert g("foo.rst") == "text"
-        >>> assert g("foo.md") == "text"
-        >>> assert g("foo.markdown") == "text"
+        >>> assert g("foo.rst") == "structured-text"
+        >>> assert g("foo.md") == "structured-text"
+        >>> assert g("foo.markdown") == "structured-text"
     """
 
     def __init__(self):

@@ -95,6 +95,7 @@ content-types:
   text:
   - .txt
   - .kkf
+  structured-text:
   - .rst
   - .md
   - .markdown
