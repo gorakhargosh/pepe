@@ -29,7 +29,7 @@ if sys.version_info < (3,):
 else:
     extra = dict(use_2to3=True)
 
-install_requires = []
+install_requires = ['pathtools', 'pyyaml']
 if sys.version_info < (2, 7, 0):
 # argparse is merged into Python 2.7 in the Python 2x series
 # and Python 3.2 in the Python 3x series.
