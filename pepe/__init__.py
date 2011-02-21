@@ -108,6 +108,17 @@ DEFAULT_CONTENT_TYPES_FILE = resource_filename(__name__, "content-types.yaml")
 
 logger = logging.getLogger("pepe")
 
+# TODO: Why is only one regexp prefixed with r''?
+PREPROCESSOR_STATEMENT_REGEXP_PATTERNS = [
+    '#\s*(?P<op>if|elif|ifdef|ifndef)\s+(?P<expr>.*?)',
+    '#\s*(?P<op>else|endif)',
+    '#\s*(?P<op>error)\s+(?P<error>.*?)',
+    '#\s*(?P<op>define)\s+(?P<var>[^\s]*?)(\s+(?P<val>.+?))?',
+    '#\s*(?P<op>undef)\s+(?P<var>[^\s]*?)',
+    '#\s*(?P<op>include)\s+"(?P<fname>.*?)"',
+    r'#\s*(?P<op>include)\s+(?P<var>[^\s]+?)',
+]
+
 
 class PreprocessorError(Exception):
     def __init__(self, error_message, filename=None, line_number=None,
@@ -164,12 +175,45 @@ def _evaluate(expression, defines):
     return return_value
 
 
+def get_statement_regexps(comment_groups):
+    # Generate statement parsing regexes. Basic format:
+    #       <comment-prefix> <preprocessor-stmt> <comment-suffix>
+    #  Examples:
+    #       <!-- #if foo -->
+    #       ...
+    #       <!-- #endif -->
+    #
+    #       # #if BAR
+    #       ...
+    #       # #else
+    #       ...
+    #       # #endif
+    patterns = []
+    for preprocessor_statement_regexp in PREPROCESSOR_STATEMENT_REGEXP_PATTERNS:
+        # The comment group prefix and suffix can either be just a
+        # string or a compiled regex.
+        for cprefix, csuffix in comment_groups:
+            if hasattr(cprefix, "pattern"):
+                pattern = cprefix.pattern
+            else:
+                pattern = r"^\s*%s\s*" % re.escape(cprefix)
+            pattern += preprocessor_statement_regexp
+            if hasattr(csuffix, "pattern"):
+                pattern += csuffix.pattern
+            else:
+                pattern += r"\s*%s\s*$" % re.escape(csuffix)
+            patterns.append(pattern)
+    statement_regexps = [re.compile(p) for p in patterns]
+    return statement_regexps
+
+
 def preprocess(input_file,
                output_file,
-               defines={},
+               defines=None,
                options=None,
                content_types_db=None,
-               _preprocessed_files=None):
+               _preprocessed_files=None,
+               _depth=0):
     """
     Preprocesses the specified file.
 
@@ -188,6 +232,9 @@ def preprocess(input_file,
     :param _preprocessed_files:
         (for internal use only) is used to ensure files
         are not recursively preprocessed.
+    :param _depth:
+        When the call reaches _depth == 0, the output file is actually
+        written. For all internal recursive calls _depth == 1.
     :return:
         Modified dictionary of defines or raises ``PreprocessorError`` if
         an error occurred.
@@ -200,6 +247,8 @@ def preprocess(input_file,
     default_content_type = options.default_content_type
     input_filename = input_file.name
 
+    defines = defines or {}
+
     # Ensure preprocessing isn't cyclic(?).
     _preprocessed_files = _preprocessed_files or []
     input_file_absolute_path = absolute_path(input_filename)
@@ -210,45 +259,7 @@ def preprocess(input_file,
 
     # Determine the content type and comment info for the input file.
     comment_groups = content_types_db.get_comment_group_for_path(input_filename, default_content_type)
-
-    # Generate statement parsing regexes. Basic format:
-    #       <comment-prefix> <preprocessor-stmt> <comment-suffix>
-    #  Examples:
-    #       <!-- #if foo -->
-    #       ...
-    #       <!-- #endif -->
-    #
-    #       # #if BAR
-    #       ...
-    #       # #else
-    #       ...
-    #       # #endif
-    # TODO: Why is only one regexp prefixed with r''?
-    preprocessor_statement_regexps = [
-        '#\s*(?P<op>if|elif|ifdef|ifndef)\s+(?P<expr>.*?)',
-        '#\s*(?P<op>else|endif)',
-        '#\s*(?P<op>error)\s+(?P<error>.*?)',
-        '#\s*(?P<op>define)\s+(?P<var>[^\s]*?)(\s+(?P<val>.+?))?',
-        '#\s*(?P<op>undef)\s+(?P<var>[^\s]*?)',
-        '#\s*(?P<op>include)\s+"(?P<fname>.*?)"',
-        r'#\s*(?P<op>include)\s+(?P<var>[^\s]+?)',
-    ]
-    patterns = []
-    for preprocessor_statement_regexp in preprocessor_statement_regexps:
-        # The comment group prefix and suffix can either be just a
-        # string or a compiled regex.
-        for cprefix, csuffix in comment_groups:
-            if hasattr(cprefix, "pattern"):
-                pattern = cprefix.pattern
-            else:
-                pattern = r"^\s*%s\s*" % re.escape(cprefix)
-            pattern += preprocessor_statement_regexp
-            if hasattr(csuffix, "pattern"):
-                pattern += csuffix.pattern
-            else:
-                pattern += r"\s*%s\s*$" % re.escape(csuffix)
-            patterns.append(pattern)
-    stmtRes = [re.compile(p) for p in patterns]
+    statement_regexps = get_statement_regexps(comment_groups)
 
     # Process the input file.
     # (Would be helpful if I knew anything about lexing and parsing
@@ -261,17 +272,17 @@ def preprocess(input_file,
     states = [(EMIT, # a state is (<emit-or-skip-lines-in-this-section>,
                0, #             <have-emitted-in-this-if-block>,
                0)]     #             <have-seen-'else'-in-this-if-block>)
-    lineNum = 0
+    line_number = 0
     for line in input_lines:
-        lineNum += 1
-        logger.debug("line %d: %r", lineNum, line)
-        defines['__LINE__'] = lineNum
+        line_number += 1
+        logger.debug("line %d: %r", line_number, line)
+        defines['__LINE__'] = line_number
 
         # Is this line a preprocessor stmt line?
         #XXX Could probably speed this up by optimizing common case of
         #    line NOT being a preprocessor stmt line.
-        for stmtRe in stmtRes:
-            match = stmtRe.match(line)
+        for statement_regexp in statement_regexps:
+            match = statement_regexp.match(line)
             if match:
                 break
         else:
@@ -322,7 +333,8 @@ def preprocess(input_file,
                                          defines=defines,
                                          options=options,
                                          content_types_db=content_types_db,
-                                         _preprocessed_files=_preprocessed_files)
+                                         _preprocessed_files=_preprocessed_files,
+                                         _depth=1)
             elif op in ("if", "ifdef", "ifndef"):
                 if op == "if":
                     expr = match.group("expr")
@@ -427,7 +439,10 @@ def preprocess(input_file,
         raise PreprocessorError("superfluous #endif on or before this line",
                                 defines['__FILE__'], defines['__LINE__'])
 
-    if temp_output_buffer != output_file:
+    #if temp_output_buffer != output_file:
+    #    temp_output_buffer.close()
+    if _depth == 0:
+        output_file.write(temp_output_buffer.getvalue())
         temp_output_buffer.close()
 
     return defines
@@ -686,7 +701,7 @@ def parse_command_line():
                         '--output',
                         metavar="OUTPUT_FILE",
                         dest='output_filename',
-                        default=sys.stdout,
+                        default=None,
                         help='Output file name (default STDOUT)')
     parser.add_argument('-f',
                         '--force',
@@ -822,24 +837,33 @@ def main():
         for config_file in args.content_types_config_files:
             content_types_db.add_config_file(config_file)
 
+        output_filename = args.output_filename
+
         with open(args.input_filename, 'rb') as input_file:
-            if os.path.exists(args.output_filename):
-                if args.should_force_overwrite:
-                    with open(args.output_filename, 'wb') as output_file:
+            if output_filename is None:
+                preprocess(input_file=input_file,
+                           output_file=sys.stdout,
+                           defines=defines,
+                           options=args,
+                           content_types_db=content_types_db)
+            else:
+                if os.path.exists(output_filename):
+                    if args.should_force_overwrite:
+                        with open(output_filename, 'wb') as output_file:
+                            preprocess(input_file=input_file,
+                                       output_file=output_file,
+                                       defines=defines,
+                                       options=args,
+                                       content_types_db=content_types_db)
+                    else:
+                        raise IOError("File `%s` exists - cannot overwrite. (Use -f to force overwrite.)" % args.output_filename)
+                else:
+                    with open(output_filename, 'wb') as output_file:
                         preprocess(input_file=input_file,
                                    output_file=output_file,
                                    defines=defines,
                                    options=args,
                                    content_types_db=content_types_db)
-                else:
-                    raise IOError("File `%s` exists - cannot overwrite. (Use -f to force overwrite.)" % args.output_filename)
-            else:
-                with open(args.output_filename, 'wb') as output_file:
-                    preprocess(input_file=input_file,
-                               output_file=output_file,
-                               defines=defines,
-                               options=args,
-                               content_types_db=content_types_db)
     except PreprocessorError, ex:
         if logging_level == logging.DEBUG:
             import traceback
