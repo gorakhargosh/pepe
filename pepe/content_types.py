@@ -92,7 +92,7 @@ class ContentTypesDatabase(object):
         if config_file:
             self.add_config_file(config_file)
 
-    def get_comment_group_for_path(self, pathname):
+    def get_comment_group_for_path(self, pathname, default_content_type=None):
         """
         Obtains the comment group for a specified pathname.
 
@@ -112,6 +112,12 @@ class ContentTypesDatabase(object):
             [['#', '']]
             >>> g("foobar.js")
             [['/*', '*/'], ['//', '']]
+
+            # If the content type cannot be determined, we assume the content
+            # type to be ``python`` in this case.
+            >>> g('foobar.f37993ajdha73', default_content_type='python')
+            [['#', '']]
+
             >>> g('foobar.rst')
             Traceback (most recent call last):
                 ...
@@ -123,8 +129,13 @@ class ContentTypesDatabase(object):
             """
         content_type = self.guess_content_type(pathname)
         if not content_type:
-            raise ValueError(
-                "No content type defined for file path: %s" % pathname)
+            # Content type is not found.
+            if default_content_type:
+                content_type = default_content_type
+                return self.get_comment_group(content_type)
+            else:
+                raise ValueError(
+                    "No content type defined for file path: %s" % pathname)
         else:
             try:
                 return self.get_comment_group(content_type)
