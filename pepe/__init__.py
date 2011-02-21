@@ -92,30 +92,19 @@ import sys
 import types
 import re
 from pkg_resources import resource_filename
+from pathtools import absolute_path
 try:
     from pepe.data import COMMENT_GROUPS
     from pepe.content_types import ContentTypesDatabase
-
 # TODO: Remove this later.
 except ImportError:
     from data import COMMENT_GROUPS
     from content_types import ContentTypesDatabase
 
 
-DEFAULT_CONTENT_TYPES = open(
-    resource_filename(__name__, "content.types")).read()
+DEFAULT_CONTENT_TYPES_FILE = resource_filename(__name__, "content-types.yaml")
 
 logger = logging.getLogger("pepe")
-
-
-_gDefaultContentTypesRegistry = None
-
-def getDefaultContentTypesRegistry():
-    global _gDefaultContentTypesRegistry
-    if _gDefaultContentTypesRegistry is None:
-        _gDefaultContentTypesRegistry = ContentTypesDatabase()
-    return _gDefaultContentTypesRegistry
-
 
 
 class PreprocessorError(Exception):
@@ -129,7 +118,6 @@ class PreprocessorError(Exception):
 
     def __str__(self):
         """
-
         Usage:
 
             >>> assert str(PreprocessorError("whatever", filename="somefile.py", line_number=20, line="blahblah")) == "somefile.py:20: whatever"
@@ -174,15 +162,12 @@ def _evaluate(expression, defines):
     return return_value
 
 
-def preprocess(infile,
-               outfile=sys.stdout,
+def preprocess(input_file,
+               output_file=sys.stdout,
                defines={},
-               should_force_overwrite=False,
-               should_keep_lines=False,
-               include_paths=[],
-               should_substitute=False,
+               options=None,
                content_type=None,
-               content_types_registry=None,
+               content_types_db=None,
                _preprocessed_files=None):
     """
     Preprocesses the specified file.
@@ -211,45 +196,34 @@ def preprocess(infile,
     :param content_type:
         can be used to specify the content type of the input
         file. It not given, it will be guessed.
-    :param content_types_registry:
-        is an instance of ContentTypesRegistry. If not specified
-        a default registry will be created.
+    :param content_types_db:
+        is an instance of ``ContentTypesDatabase``.
     :param _preprocessed_files:
         (for internal use only) is used to ensure files
-        are not recusively preprocessed.
+        are not recursively preprocessed.
 
     :return:
         Modified dictionary of defines or raises ``PreprocessorError`` if
         an error occurred.
     """
+
+    include_paths = options.include_paths
+    should_force_overwrite = options.should_force_overwrite
+    should_keep_lines = options.should_keep_lines
+    should_substitute = options.should_substitute
+
     if _preprocessed_files is None:
         _preprocessed_files = []
-    logger.info("preprocess(infile=%r, outfile=%r, defines=%r, force=%r, "\
-             "keepLines=%r, includePath=%r, contentType=%r, "\
-             "__preprocessedFiles=%r)", infile, outfile, defines,
-             should_force_overwrite,
-             should_keep_lines, include_paths, content_type,
-             _preprocessed_files)
-    absInfile = os.path.normpath(os.path.abspath(infile))
-    if absInfile in _preprocessed_files:
+
+    # Ensure the same file is not preprocessed again.
+    input_file_absolute_path = absolute_path(input_file)
+    if input_file_absolute_path in _preprocessed_files:
         raise PreprocessorError("detected recursive #include of '%s'"\
-                                % infile)
-    _preprocessed_files.append(os.path.abspath(infile))
+                                % input_file)
+    _preprocessed_files.append(input_file_absolute_path)
 
     # Determine the content type and comment info for the input file.
-    if content_type is None:
-        registry = content_types_registry or getDefaultContentTypesRegistry()
-        content_type = registry.get_content_type(infile)
-        if content_type is None:
-            content_type = "Text"
-            logger.warn("defaulting content type for '%s' to '%s'",
-                     infile, content_type)
-    try:
-        cgs = COMMENT_GROUPS[content_type]
-    except KeyError:
-        raise PreprocessorError("don't know comment delimiters for content "\
-                                "type '%s' (file '%s')"\
-                                % (content_type, infile))
+    comment_groups = content_types_db.get_comment_group_for_path(input_file, args.default_content_type)
 
     # Generate statement parsing regexes. Basic format:
     #       <comment-prefix> <preprocessor-stmt> <comment-suffix>
@@ -275,7 +249,7 @@ def preprocess(infile,
     for stmt in stmts:
         # The comment group prefix and suffix can either be just a
         # string or a compiled regex.
-        for cprefix, csuffix in cgs:
+        for cprefix, csuffix in comment_groups:
             if hasattr(cprefix, "pattern"):
                 pattern = cprefix.pattern
             else:
@@ -291,18 +265,18 @@ def preprocess(infile,
     # Process the input file.
     # (Would be helpful if I knew anything about lexing and parsing
     # simple grammars.)
-    fin = open(infile, 'r')
+    fin = open(input_file, 'r')
     lines = fin.readlines()
     fin.close()
-    if type(outfile) in types.StringTypes:
-        if should_force_overwrite and os.path.exists(outfile):
-            os.chmod(outfile, 0777)
-            os.remove(outfile)
-        fout = open(outfile, 'w')
+    if type(output_file) in types.StringTypes:
+        if should_force_overwrite and os.path.exists(output_file):
+            os.chmod(output_file, 0777)
+            os.remove(output_file)
+        fout = open(output_file, 'w')
     else:
-        fout = outfile
+        fout = output_file
 
-    defines['__FILE__'] = infile
+    defines['__FILE__'] = input_file
     SKIP, EMIT = range(2) # states
     states = [(EMIT, # a state is (<emit-or-skip-lines-in-this-section>,
                0, #             <have-emitted-in-this-if-block>,
@@ -354,7 +328,7 @@ def preprocess(infile,
                         # This is the first include form: #include "path"
                         f = match.group("fname")
 
-                    for d in [os.path.dirname(infile)] + include_paths:
+                    for d in [os.path.dirname(input_file)] + include_paths:
                         fname = os.path.normpath(os.path.join(d, f))
                         if os.path.exists(fname):
                             break
@@ -363,12 +337,11 @@ def preprocess(infile,
                             "could not find #include'd file "\
                             "\"%s\" on include path: %r"\
                             % (f, include_paths))
-                    defines = preprocess(fname, fout, defines,
-                                         should_force_overwrite,
-                                         should_keep_lines, include_paths,
-                                         should_substitute,
-                                         content_types_registry=content_types_registry
-                                         ,
+                    defines = preprocess(fname,
+                                         fout,
+                                         defines=defines,
+                                         options=options,
+                                         content_types_db=content_types_db,
                                          _preprocessed_files=_preprocessed_files)
             elif op in ("if", "ifdef", "ifndef"):
                 if op == "if":
@@ -474,7 +447,7 @@ def preprocess(infile,
         raise PreprocessorError("superfluous #endif on or before this line",
                                 defines['__FILE__'], defines['__LINE__'])
 
-    if fout != outfile:
+    if fout != output_file:
         fout.close()
 
     return defines
@@ -777,6 +750,11 @@ numbers to stay constant.''')
                         help='''\
 Substitute #defines into emitted lines.
 (Disabled by default to avoid polluting strings)''')
+    parser.add_argument('--default-content-type',
+                        metavar="CONTENT_TYPE",
+                        dest='default_content_type',
+                        default=None,
+                        help='If the content type of the file cannot be determined this will be used. (Default: an error is raised)')
     parser.add_argument('-c',
                         '--content-types-path',
                         '--content-types-config',
@@ -859,16 +837,15 @@ def main():
     defines = parse_definitions(args.definitions)
 
     try:
-        content_types_registry = ContentTypesDatabase(
-            args.content_types_config_files)
-        preprocess(args.input_file,
-                   args.output_file,
-                   defines,
-                   args.should_force_overwrite,
-                   args.should_keep_lines,
-                   args.include_paths,
-                   args.should_substitute,
-                   content_types_registry=content_types_registry)
+        content_types_db = ContentTypesDatabase(DEFAULT_CONTENT_TYPES_FILE)
+        for config_file in args.content_types_config_files:
+            content_types_db.add_config_file(config_file)
+
+        preprocess(input_file=args.input_file,
+                   output_file=args.output_file,
+                   defines=defines,
+                   options=args,
+                   content_types_db=content_types_db)
     except PreprocessorError, ex:
         if logging_level == logging.DEBUG:
             import traceback
