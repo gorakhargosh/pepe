@@ -6,23 +6,132 @@ import os
 import yaml
 
 
+# Ensure structure-text has NO comment-groups within this
+# test config.
+test_content_types_yaml = """
+version: 1.0
+
+comment-groups:
+  python:
+  - ['#', '']
+  xml:
+  - ['<!--', '-->']
+  - ['/*', '*/']
+  - ['//', '']
+  html:
+  - ['<!--', '-->']
+  - ['/*', '*/']
+  - ['//', '']
+  Makefile:
+  - ['#', '']
+  javascript:
+  - ['/*', '*/']
+  - ['//', '']
+  text:
+  - ['#', '']
+
+content-types:
+  javascript:
+  - .js
+  coffee-script:
+  - .coffee
+  - Cakefile
+  xml:
+  - .xhtml
+  - .xml
+  - .xsl
+  - .xslt
+  - .xul
+  - .rdf
+  - .wxi
+  - .wxs
+  - .kpf
+  text:
+  - .txt
+  - .kkf
+  structured-text:
+  - .rst
+  - .md
+  - .markdown
+  ruby:
+  - .rb
+  - Rakefile
+  python:
+  - .py
+  - .pyw
+  - .ksf
+  - SConscript
+  - SConstruct
+  - wscript
+  - wscript_build
+  Makefile:
+  - /^[Mm]akefile.*$/
+"""
+
+test_config = yaml.load(test_content_types_yaml)
+
 extension_case_transform_func = (lambda w: w)
 if sys.platform.startswith('win'):
     # We lower the pattern case on Windows to keep stuff case insensitive.
     def extension_case_transform_func(extension):
         return extension.lower()
 
-
 class ContentTypesDatabase(object):
-    """A class that handles determining the content type of a file path.
+    """
+    A class that handles determining the content type of a file path.
     """
 
-    def __init__(self):
+    def __init__(self, config_file=None):
         self._extension_map = {}
         self._regexp_map = {}
         self._filename_map = {}
         self._content_types = {}
         self._comment_groups = {}
+        self._test_config = test_config
+
+        if config_file:
+            self.add_config_file(config_file)
+
+    def get_comment_group_for_path(self, pathname):
+        """
+        Obtains the comment group for a specified pathname.
+
+        :param pathname:
+            The path for which the comment group will be obtained.
+        :return:
+            Returns the comment group for the specified pathname
+            or raises a ``ValueError`` if a content type is not found
+            or raises a ``KeyError`` if a comment group is not found.
+
+        Usage:
+        Usage:
+            >>> db = ContentTypesDatabase()
+            >>> db.add_config(db._test_config, 'test_config.yaml')
+            >>> g = db.get_comment_group_for_path
+            >>> g("foobar.py")
+            [['#', '']]
+            >>> g("foobar.js")
+            [['/*', '*/'], ['//', '']]
+            >>> g('foobar.rst')
+            Traceback (most recent call last):
+                ...
+            KeyError: 'No comment groups for content type `structured-text` for file `foobar.rst` found'
+            >>> g("structured-text")
+            Traceback (most recent call last):
+                ...
+            ValueError: No content type defined for file path: structured-text
+            """
+        content_type = self.guess_content_type(pathname)
+        if not content_type:
+            raise ValueError(
+                "No content type defined for file path: %s" % pathname)
+        else:
+            try:
+                return self.get_comment_group(content_type)
+            except KeyError:
+                raise KeyError(
+                    "No comment groups for content type `%s` for file `%s` found" % (
+                    content_type, pathname))
 
 
     def get_comment_group(self, content_type):
@@ -38,19 +147,22 @@ class ContentTypesDatabase(object):
 
         Usage:
             >>> db = ContentTypesDatabase()
-            >>> db.add_config_file('content-types.yaml')
+            >>> db.add_config(db._test_config, 'test_config.yaml')
             >>> g = db.get_comment_group
             >>> g("python")
             [['#', '']]
             >>> g("javascript")
             [['/*', '*/'], ['//', '']]
-            >>> g("MIIEogIBAAKCAQEAxLc7h/JVoiJ9zngIjNqf4ZnhXoqTfVEdfXEq7hFW1cQwqRsr\
-ZvuV6SxBVxdQ4Glg5wR59CLM9qePRtXRWbR+jeAmzEGKhohKieIw4iYwuJxu5jk7")
+            >>> g("structured-text")
             Traceback (most recent call last):
-                ...
-            KeyError: 'MIIEogIBAAKCAQEAxLc7h/JVoiJ9zngIjNqf4ZnhXoqTfVEdfXEq7hFW1cQwqRsrZvuV6SxBVxdQ4Glg5wR59CLM9qePRtXRWbR+jeAmzEGKhohKieIw4iYwuJxu5jk7'
+            ...
+            KeyError: 'No comment groups for content type `structured-text` found.'
         """
-        return self._comment_groups[content_type]
+        try:
+            return self._comment_groups[content_type]
+        except KeyError:
+            raise KeyError(
+                "No comment groups for content type `%s` found." % content_type)
 
 
     def add_config_file(self, config_filename):
@@ -63,10 +175,10 @@ ZvuV6SxBVxdQ4Glg5wR59CLM9qePRtXRWbR+jeAmzEGKhohKieIw4iYwuJxu5jk7")
         with open(config_filename, 'rb') as f:
             content = f.read()
             config = yaml.load(content)
-            self._update_config(config, config_filename)
+            self.add_config(config, config_filename)
 
 
-    def _update_config(self, config, config_filename):
+    def add_config(self, config, config_filename):
         """
         Updates the content types database with the given configuration.
 
@@ -168,3 +280,9 @@ ZvuV6SxBVxdQ4Glg5wR59CLM9qePRtXRWbR+jeAmzEGKhohKieIw4iYwuJxu5jk7")
         # TODO: Try to determine from mime-type.
 
         return content_type
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
