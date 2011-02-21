@@ -1,100 +1,137 @@
 
+import sys
+import re
+import os
+import yaml
+
+
+extension_case_transform_func = (lambda w: w)
+if sys.platform.startswith('win'):
+    # We lower the pattern case on Windows to keep stuff case insensitive.
+    def extension_case_transform_func(extension):
+        return extension.lower()
+
 
 class ContentTypesDatabase(object):
     """A class that handles determining the file type of a given path.
 
     Usage:
-        >>> registry = ContentTypesRegistry()
-        >>> assert registry.get_content_type("__init__.py") == "Python"
+        >>> db = ContentTypesDatabase()
+        >>> assert db.guess_content_type("__init__.py") == "Python"
     """
 
-    def __init__(self, content_types_config_files=None):
-        self.content_types_config_files = content_types_config_files or []
-        self._load()
+    def __init__(self):
+        self._extension_map = {}
+        self._regexp_map = {}
+        self._filename_map = {}
+        self._content_types = {}
+        self._comment_groups = {}
 
-    def _load(self):
-        from os.path import dirname, join, exists
 
-        self.suffixMap = {}
-        self.regexMap = {}
-        self.filenameMap = {}
-
-        self._loadContentType(DEFAULT_CONTENT_TYPES)
-        localContentTypesPath = join(dirname(__file__), "content.types")
-        if exists(localContentTypesPath):
-            logger.debug("load content types file: `%r'" % localContentTypesPath)
-            self._loadContentType(open(localContentTypesPath, 'r').read())
-        for path in self.content_types_config_files:
-            logger.debug("load content types file: `%r'" % path)
-            self._loadContentType(open(path, 'r').read())
-
-    def _loadContentType(self, content, path=None):
-        """Return the registry for the given content.types file.
-
-        The registry is three mappings:
-            <suffix> -> <content type>
-            <regex> -> <content type>
-            <filename> -> <content type>
+    def get_comment_group(self, content_type):
         """
-        for line in content.splitlines(0):
-            words = line.strip().split()
-            for i in range(len(words)):
-                if words[i][0] == '#':
-                    del words[i:]
-                    break
-            if not words: continue
-            contentType, patterns = words[0], words[1:]
+        Returns a comment group for the specified content type.
+
+        :param content_type:
+            The content type for which the comment group will be determined.
+        :return:
+            Comment group for the specified content type.
+        """
+        return self._comment_groups[content_type]
+
+
+    def add_config_file(self, config_filename):
+        """
+        Parses the content.types file and updates the content types database.
+
+        :param config_filename:
+            The path to the configuration file.
+        """
+        with open(config_filename, 'rb') as f:
+            content = f.read()
+            config = yaml.load(content)
+            self._update_config(config, config_filename)
+
+
+    def _update_config(self, config, config_filename):
+        """
+        Updates the content types database with the given configuration.
+
+        :param config:
+            The configuration dictionary.
+        :param config_filename:
+            The path of the configuration file.
+        """
+        content_types = config['content-types']
+        comment_groups = config['comment-groups']
+
+        self._comment_groups.update(comment_groups)
+        self._content_types.update(content_types)
+
+        for content_type, patterns in content_types.iteritems():
             if not patterns:
-                if line[-1] == '\n': line = line[:-1]
-                raise PreprocessorError("bogus content.types line, there must "\
-                                        "be one or more patterns: '%s'" % line)
+                raise ValueError('''error: config parse error: \
+%s: Missing pattern for content type - `%s`"''' % (config_file, content_type))
             for pattern in patterns:
-                if pattern.startswith('.'):
-                    if sys.platform.startswith("win"):
-                        # Suffix patterns are case-insensitive on Windows.
-                        pattern = pattern.lower()
-                    self.suffixMap[pattern] = contentType
-                elif pattern.startswith('/') and pattern.endswith('/'):
-                    self.regexMap[re.compile(pattern[1:-1])] = contentType
+                first_character = pattern[0]
+                last_character = pattern[-1]
+                if first_character == '.':
+                    # Extension map.
+                    pattern = extension_case_transform_func(pattern)
+                    self._extension_map[pattern] = content_type
+                elif first_character == '/' and last_character == '/':
+                    # Regular expression map.
+                    self._regexp_map[re.compile(pattern[1:-1])] = content_type
                 else:
-                    self.filenameMap[pattern] = contentType
+                    # Filename map.
+                    self._filename_map[pattern] = content_type
 
-    def get_content_type(self, path):
-        """Return a content type for the given path.
 
-        @param path {str} The path of file for which to guess the
-            content type.
-        @returns {str|None} Returns None if could not determine the
-            content type.
+    def guess_content_type(self, pathname):
+        """Guess the content type for the given path.
+
+        :param path:
+            The path of file for which to guess the content type.
+        :return:
+            Returns the content type or ``None`` if the content type
+            could not be determined.
         """
-        basename = os.path.basename(path)
-        contentType = None
+        file_basename = os.path.basename(pathname)
+        content_type = None
+
         # Try to determine from the path.
-        if not contentType and self.filenameMap.has_key(basename):
-            contentType = self.filenameMap[basename]
+        if not content_type and self._filename_map.has_key(file_basename):
+            content_type = self._filename_map[file_basename]
             logger.debug("Content type of '%s' is '%s' (determined from full "\
-                      "path).", path, contentType)
-            # Try to determine from the suffix.
-        if not contentType and '.' in basename:
-            suffix = "." + basename.split(".")[-1]
-            if sys.platform.startswith("win"):
-                # Suffix patterns are case-insensitive on Windows.
-                suffix = suffix.lower()
-            if self.suffixMap.has_key(suffix):
-                contentType = self.suffixMap[suffix]
+                         "path).", pathname, content_type)
+
+        # Try to determine from the suffix.
+        if not content_type and '.' in file_basename:
+            extension = "." + file_basename.split(".")[-1]
+            extension = extension_case_transform_func(extension)
+            try:
+                content_type = self._extension_map[extension]
                 logger.debug("Content type of '%s' is '%s' (determined from "\
-                          "suffix '%s').", path, contentType, suffix)
-                # Try to determine from the registered set of regex patterns.
-        if not contentType:
-            for regex, ctype in self.regexMap.items():
-                if regex.search(basename):
-                    contentType = ctype
+                             "suffix '%s').", pathname, content_type, extension)
+            except KeyError:
+                pass
+
+        # Try to determine from the registered set of regular expression patterns.
+        if not content_type:
+            for regexp, _content_type in self._regexp_map.iteritems():
+                if regexp.search(file_basename):
+                    content_type = _content_type
                     logger.debug(
-                        "Content type of '%s' is '%s' (matches regex '%s')",
-                        path, contentType, regex.pattern)
+                        "Content type of '%s' is '%s' (matches regexp '%s')",
+                        pathname, content_type, regexp.pattern)
                     break
-                    # Try to determine from the file contents.
-        content = open(path, 'rb').read()
-        if content.startswith("<?xml"):  # cheap XML sniffing
-            contentType = "XML"
-        return contentType
+
+        # Try to determine from the file contents.
+        with open(pathname, 'rb') as f:
+            content = f.read()
+            if content.startswith("<?xml"):  # cheap XML sniffing
+                content_type = "XML"
+
+        # TODO: Try to determine from mime-type.
+
+        return content_type

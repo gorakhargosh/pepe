@@ -1,0 +1,92 @@
+version: 1.0
+
+comment-groups:
+  python: [['#', '']]
+  perl: [['#', '']]
+  php: [['/*', '*/'], ['//', ''], ['#', '']]
+  ruby: [['#', '']]
+  tcl: [['#', '']]
+  shell: [['#', '']]
+  xml: [['<!--', '-->'], ['/*', '*/'], ['//', '']]
+  html: [['<!--', '-->'], ['/*', '*/'], ['//', '']]
+  Makefile: [['#', '']]
+  javascript: [['/*', '*/'], ['//', '']]
+  css: [['/*', '*/']]
+  c: [['/*', '*/']]
+  cpp: [['/*', '*/'], ['//', '']]
+  java: [['/*', '*/'], ['//', '']]
+  c-sharp: [['/*', '*/'], ['//', '']]
+  idl: [['/*', '*/'], ['//', '']]
+  text: [['#', '']]
+  #fortran: [[re.compile[r'^[a-zA-Z*$]\s*'], ''], ['!', '']]
+  tex: [['%', '']]
+
+content-types:
+  php:
+  - .php
+  idl:
+  - .idl
+  javascript:
+  - .js
+  coffee-script:
+  - .coffee
+  - Cakefile
+  csh:
+  - .csh
+  shell:
+  - .ksh
+  - .sh
+  - .zsh
+  tcl:
+  - .tcl
+  tex:
+  - .tex
+  xml:
+  - .xhtml
+  - .xml
+  - .xsl
+  - .xslt
+  - .xul
+  - .rdf
+  - .wxi
+  - .wxs
+  - .kpf
+  c-sharp:
+  - .cs
+  css:
+  - .css
+  html:
+  - .htm
+  - .html
+  perl:
+  - .pl
+  text:
+  - .txt
+  - .kkf
+  cpp:
+  - .c
+  - .cpp
+  - .cxx
+  - .cc
+  - .h
+  - .hh
+  - .hpp
+  - .hxx
+  fortran:
+  - .f
+  - .f90
+  java:
+  - .java
+  ruby:
+  - .rb
+  - Rakefile
+  python:
+  - .py
+  - .pyw
+  - .ksf
+  - SConscript
+  - SConstruct
+  - wscript
+  - wscript_build
+  Makefile:
+  - /^[Mm]akefile.*$/
