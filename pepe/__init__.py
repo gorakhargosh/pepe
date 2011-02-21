@@ -189,11 +189,12 @@ def preprocess(input_file,
         an error occurred.
     """
 
+    # Options that can later be turned into function parameters.
     include_paths = options.include_paths
     should_force_overwrite = options.should_force_overwrite
     should_keep_lines = options.should_keep_lines
     should_substitute = options.should_substitute
-
+    default_content_type = options.default_content_type
 
     # Ensure files are not recursively preprocessed.
     _preprocessed_files = _preprocessed_files or []
@@ -204,7 +205,7 @@ def preprocess(input_file,
     _preprocessed_files.append(input_file_absolute_path)
 
     # Determine the content type and comment info for the input file.
-    comment_groups = content_types_db.get_comment_group_for_path(input_file, options.default_content_type)
+    comment_groups = content_types_db.get_comment_group_for_path(input_file, default_content_type)
 
     # Generate statement parsing regexes. Basic format:
     #       <comment-prefix> <preprocessor-stmt> <comment-suffix>
