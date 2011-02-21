@@ -6,8 +6,10 @@ import os
 import yaml
 
 
-# Ensure structure-text has NO comment-groups within this
-# test config.
+# * Ensure structure-text has NO comment-groups within this
+#   test config.
+# * Ensure foobar.f37993ajdha73 does not exist anywhere in this
+#   test config.
 test_content_types_yaml = """
 version: 1.0
 
@@ -103,7 +105,6 @@ class ContentTypesDatabase(object):
             or raises a ``ValueError`` if a content type is not found
             or raises a ``KeyError`` if a comment group is not found.
 
-        Usage:
         Usage:
             >>> db = ContentTypesDatabase()
             >>> db.add_config(db._test_config, 'test_config.yaml')
