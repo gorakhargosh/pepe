@@ -161,7 +161,7 @@ def _evaluate(expression, defines):
 
 
 def preprocess(input_file,
-               output_file=sys.stdout,
+               output_file,
                defines={},
                options=None,
                content_types_db=None,
@@ -248,14 +248,14 @@ def preprocess(input_file,
     # Process the input file.
     # (Would be helpful if I knew anything about lexing and parsing
     # simple grammars.)
-    fin = open(input_file, 'r')
+    fin = open(input_file, 'rb')
     lines = fin.readlines()
     fin.close()
     if type(output_file) in types.StringTypes:
         if should_force_overwrite and os.path.exists(output_file):
             os.chmod(output_file, 0777)
             os.remove(output_file)
-        fout = open(output_file, 'w')
+        fout = open(output_file, 'wb')
     else:
         fout = output_file
 
