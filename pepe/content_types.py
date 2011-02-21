@@ -114,19 +114,24 @@ class ContentTypesDatabase(object):
             >>> g("foobar.js")
             [['/*', '*/'], ['//', '']]
 
+            >>> g('foobar.rst')
+            Traceback (most recent call last):
+                ...
+            KeyError: 'No comment groups for content type `structured-text` for file `foobar.rst` found'
+
             # If the content type cannot be determined, we assume the content
             # type to be ``python`` in this case.
             >>> g('foobar.f37993ajdha73', default_content_type='python')
             [['#', '']]
 
-            >>> g('foobar.rst')
+            >>> g("foobar.f37993ajdha73")
             Traceback (most recent call last):
                 ...
-            KeyError: 'No comment groups for content type `structured-text` for file `foobar.rst` found'
-            >>> g("structured-text")
+            ValueError: No content type defined for file path: foobar.f37993ajdha73
+            >>> g("foobar.f37993ajdha73", default_content_type=None)
             Traceback (most recent call last):
                 ...
-            ValueError: No content type defined for file path: structured-text
+            ValueError: No content type defined for file path: foobar.f37993ajdha73
             """
         content_type = self.guess_content_type(pathname)
         if not content_type:
