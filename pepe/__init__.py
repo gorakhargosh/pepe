@@ -740,6 +740,7 @@ Substitute #defines into emitted lines.
                         '--content-types-config',
                         metavar="PATH",
                         dest='content_types_config_files',
+                        default=[],
                         action='append',
                         help="""\
 Specify a path to a content.types file to assist
