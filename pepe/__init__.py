@@ -847,6 +847,7 @@ def main():
 
         with open(args.input_filename, 'rb') as input_file:
             if output_filename is None:
+                # No output file specified. Will output to stdout.
                 preprocess(input_file=input_file,
                            output_file=sys.stdout,
                            defines=defines,
@@ -855,6 +856,7 @@ def main():
             else:
                 if os.path.exists(output_filename):
                     if args.should_force_overwrite:
+                        # Overwrite existing file.
                         with open(output_filename, 'wb') as output_file:
                             preprocess(input_file=input_file,
                                        output_file=output_file,
@@ -864,6 +866,7 @@ def main():
                     else:
                         raise IOError("File `%s` exists - cannot overwrite. (Use -f to force overwrite.)" % args.output_filename)
                 else:
+                    # File doesn't exist and output file is provided, so write.
                     with open(output_filename, 'wb') as output_file:
                         preprocess(input_file=input_file,
                                    output_file=output_file,
