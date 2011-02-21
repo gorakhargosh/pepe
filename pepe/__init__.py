@@ -164,42 +164,26 @@ def preprocess(input_file,
                output_file=sys.stdout,
                defines={},
                options=None,
-               content_type=None,
                content_types_db=None,
                _preprocessed_files=None):
     """
     Preprocesses the specified file.
 
-    :param infile:
+    :param input_file:
         The input path.
-    :param outfile:
+    :param output_file:
         The output path or stream (default is sys.stdout).
     :param defines:
         a dictionary of defined variables that will be
         understood in preprocessor statements. Keys must be strings and,
         currently, only the truth value of any key's value matters.
-    :param should_force_overwrite:
-        will overwrite the given outfile if it already exists. Otherwise
-        an IOError will be raise if the outfile already exists.
-    :param should_keep_lines:
-        will cause blank lines to be emitted for preprocessor lines
-        and content lines that would otherwise be skipped.
-    :param include_paths:
-        is a list of directories to search for given #include
-        directives. The directory of the file being processed is presumed.
-    :param should_substitute:
-        if true, will allow substitution of defines into emitted
-        lines. (NOTE: This substitution will happen within program strings
-        as well. This may not be what you expect.)
-    :param content_type:
-        can be used to specify the content type of the input
-        file. It not given, it will be guessed.
+    :param options:
+        A ``Namespace`` of command-line options.
     :param content_types_db:
         is an instance of ``ContentTypesDatabase``.
     :param _preprocessed_files:
         (for internal use only) is used to ensure files
         are not recursively preprocessed.
-
     :return:
         Modified dictionary of defines or raises ``PreprocessorError`` if
         an error occurred.
@@ -210,10 +194,9 @@ def preprocess(input_file,
     should_keep_lines = options.should_keep_lines
     should_substitute = options.should_substitute
 
-    if _preprocessed_files is None:
-        _preprocessed_files = []
 
-    # Ensure the same file is not preprocessed again.
+    # Ensure files are not recursively preprocessed.
+    _preprocessed_files = _preprocessed_files or []
     input_file_absolute_path = absolute_path(input_file)
     if input_file_absolute_path in _preprocessed_files:
         raise PreprocessorError("detected recursive #include of '%s'"\
@@ -221,7 +204,7 @@ def preprocess(input_file,
     _preprocessed_files.append(input_file_absolute_path)
 
     # Determine the content type and comment info for the input file.
-    comment_groups = content_types_db.get_comment_group_for_path(input_file, args.default_content_type)
+    comment_groups = content_types_db.get_comment_group_for_path(input_file, options.default_content_type)
 
     # Generate statement parsing regexes. Basic format:
     #       <comment-prefix> <preprocessor-stmt> <comment-suffix>
@@ -235,16 +218,18 @@ def preprocess(input_file,
     #       # #else
     #       ...
     #       # #endif
-    stmts = ['#\s*(?P<op>if|elif|ifdef|ifndef)\s+(?P<expr>.*?)',
-             '#\s*(?P<op>else|endif)',
-             '#\s*(?P<op>error)\s+(?P<error>.*?)',
-             '#\s*(?P<op>define)\s+(?P<var>[^\s]*?)(\s+(?P<val>.+?))?',
-             '#\s*(?P<op>undef)\s+(?P<var>[^\s]*?)',
-             '#\s*(?P<op>include)\s+"(?P<fname>.*?)"',
-             r'#\s*(?P<op>include)\s+(?P<var>[^\s]+?)',
+    # TODO: Why is only one regexp prefixed with r''?
+    preprocessor_statement_regexps = [
+        '#\s*(?P<op>if|elif|ifdef|ifndef)\s+(?P<expr>.*?)',
+        '#\s*(?P<op>else|endif)',
+        '#\s*(?P<op>error)\s+(?P<error>.*?)',
+        '#\s*(?P<op>define)\s+(?P<var>[^\s]*?)(\s+(?P<val>.+?))?',
+        '#\s*(?P<op>undef)\s+(?P<var>[^\s]*?)',
+        '#\s*(?P<op>include)\s+"(?P<fname>.*?)"',
+        r'#\s*(?P<op>include)\s+(?P<var>[^\s]+?)',
     ]
     patterns = []
-    for stmt in stmts:
+    for preprocessor_statement_regexp in preprocessor_statement_regexps:
         # The comment group prefix and suffix can either be just a
         # string or a compiled regex.
         for cprefix, csuffix in comment_groups:
@@ -252,7 +237,7 @@ def preprocess(input_file,
                 pattern = cprefix.pattern
             else:
                 pattern = r"^\s*%s\s*" % re.escape(cprefix)
-            pattern += stmt
+            pattern += preprocessor_statement_regexp
             if hasattr(csuffix, "pattern"):
                 pattern += csuffix.pattern
             else:
