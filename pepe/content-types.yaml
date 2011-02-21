@@ -31,9 +31,8 @@ content-types:
   coffee-script:
   - .coffee
   - Cakefile
-  csh:
-  - .csh
   shell:
+  - .csh
   - .ksh
   - .sh
   - .zsh
