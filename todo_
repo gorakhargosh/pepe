@@ -1,0 +1,44 @@
+# High Priority
+
+- add issues for everything important here
+- test/testsupport.py:64: DeprecationWarning: The popen2 module is deprecated.  Use the subprocess module.
+    import popen2
+- add issue from Mike Bauer:
+    Yes, that is a problem that I occasionally ran into, but mostly just hacked around because I didn't think it would be that common.
+
+    To "fix" this, I think I want to get strict about the preprocess.py directive by requiring no space between the second "#" and the directive name:
+
+        # #if ...     (this works)
+        ##  if ...    (this is not treated as a preprocess.py directive)
+
+- add logging_patch_from_alfred.patch (Alfred Lorber)
+- use path_from_path_patterns recipe to provide a simple facility for
+  recursively preprocessing a bunch of files, a dir, etc. As suggested by
+  Hans.
+- convert to logging package
+
+
+# Medium Priority
+
+- test 'includePath' optional argument
+- test cases for the module interface (do I have any?)
+- test cases for -k|--keep-lines
+- patchtemplate functionality: look at how the preprocessor.pl below does
+  this, perhaps this is an acceptible poorman's version
+  (Somewhat have this, see --substitute added in v0.6.0.)
+- stealing from http://software.hixie.ch/utilities/unix/preprocessor/
+    - Should I really add #elifdef and #elifndef?
+    - Would #filter/#endfilter be useful?
+- be more strict:
+    - perhaps add -W<arg> option to allow levels of strictness
+      - make #undef of undefined vars an error
+- perhaps add #pragma to enable turning on of options: e.g.
+    # #pragma substitution
+
+
+# Lower Priority
+
+- preprocess 2: if can justify the change for:
+    - string inter syntax that doesn't suffer from accidents (though that
+      creates a prob for maintain syntax validity in the document)
+    
